@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Vendedor - Barracão Reversa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+</head>
+
+<body>
+
+    <!-- LOGIN OVERLAY -->
+    <div id="loginOverlay" class="login-overlay active">
+        <div class="login-box">
+            <div class="login-logo">
+                <img src="logo.png" alt="Logo Barracão Reversa" class="logo-img-login">
+                <h2>Barracão Reversa</h2>
+            </div>
+            <p>Acesse o Painel do Vendedor</p>
+            <div class="password-wrapper">
+                <input type="password" id="adminPass" placeholder="Senha de administrador"
+                    autocomplete="current-password" />
+                <button type="button" class="btn-toggle-pass" id="togglePass" title="Ver senha">👁️</button>
+            </div>
+            <button id="btnLogin" class="btn-primary">Entrar</button>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="dashboard" class="dashboard" style="display: none;">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="logo.png" alt="Logo" class="logo-img-sidebar">
+                <span class="logo-text">Vendedor</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-view="view-list">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" />
+                    </svg>
+                    Meus Anúncios
+                </a>
+                <a href="#" class="nav-item" data-view="view-create">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                    </svg>
+                    Novo Anúncio
+                </a>
+                <div class="spacer"></div>
+                <a href="/" class="nav-item nav-back">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                    </svg>
+                    Ver Loja
+                </a>
+                <a href="#" class="nav-item text-danger" id="btnLogout">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path
+                            d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z" />
+                    </svg>
+                    Sair
+                </a>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <!-- VIEW: MEUS ANÚNCIOS -->
+            <div id="view-list" class="view active">
+                <div class="view-header">
+                    <h1>Meus Anúncios</h1>
+                    <button class="btn-primary" onclick="switchView('view-create')">Criar anúncio</button>
+                </div>
+
+                <div class="card card-table">
+                    <div class="table-controls">
+                        <input type="text" id="searchAds" class="input-search"
+                            placeholder="Buscar por título ou #ID...">
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="ads-table">
+                            <thead>
+                                <tr>
+                                    <th width="60">Foto</th>
+                                    <th>Título</th>
+                                    <th width="120">Preço</th>
+                                    <th width="100">Estoque</th>
+                                    <th width="80">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adsTbody">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyAds" class="empty-state" style="display: none;">
+                        <svg viewBox="0 0 24 24" width="48" height="48" fill="#ccc">
+                            <path
+                                d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" />
+                        </svg>
+                        <p>Você ainda não tem anúncios ativos.</p>
+                        <button class="btn-secondary" onclick="switchView('view-create')">Crie seu primeiro
+                            anúncio</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: NOVO ANÚNCIO -->
+            <div id="view-create" class="view">
+                <div class="view-header">
+                    <h1>Cadastrar Produto</h1>
+                </div>
+
+                <form id="formAd" class="form-grid">
+                    <!-- Coluna Esquerda: Dados Principais -->
+                    <div class="col-main">
+                        <div class="card">
+                            <h2 class="card-title">Descreva o seu produto</h2>
+
+                            <div class="form-group">
+                                <label for="adName">Título do anúncio *</label>
+                                <input type="text" id="adName" class="form-control form-lg"
+                                    placeholder="Ex: Placa mãe LGA 1155" required maxlength="60">
+                                <small class="color-mute">Seja claro, o comprador toma a decisão com base no título
+                                    curto.</small>
+                            </div>
+
+                            <div class="form-group mt-3">
+                                <label for="adDesc">Descrição completa *</label>
+                                <textarea id="adDesc" class="form-control" rows="5"
+                                    placeholder="Detalhe as marcas de uso, o que acompanha, se tem defeito crônico, etc."
+                                    required></textarea>
+                            </div>
+
+                            <div class="row mt-3">
+                                <div class="form-group flex-1">
+                                    <label for="adCat">Categoria *</label>
+                                    <select id="adCat" class="form-control" required>
+                                        <option value="Celulares e Smartphones">Celulares e Smartphones</option>
+                                        <option value="Informática e Acessórios">Informática e Acessórios</option>
+                                        <option value="Games e Consoles">Games e Consoles</option>
+                                        <option value="Placas mãe e Vídeo">Placas mãe e Vídeo</option>
+                                        <option value="Processadores">Processadores</option>
+                                        <option value="Memórias">Memórias</option>
+                                        <option value="Armazenamento (HD/SSD)">Armazenamento (HD/SSD)</option>
+                                        <option value="Fontes de energia">Fontes de energia</option>
+                                        <option value="Periféricos e Acessórios">Periféricos e Acessórios</option>
+                                        <option value="Controladores / Industrial">Controladores / Industrial</option>
+                                        <option value="Roteadores / Rede">Roteadores / Rede</option>
+                                        <option value="Eletrônicos, Áudio e Vídeo">Eletrônicos, Áudio e Vídeo</option>
+                                        <option value="TV e Vídeo">TV e Vídeo</option>
+                                        <option value="Câmeras e Foto">Câmeras e Foto</option>
+                                        <option value="Eletrodomésticos">Eletrodomésticos</option>
+                                        <option value="Ferramentas">Ferramentas</option>
+                                        <option value="Esportes e Fitness">Esportes e Fitness</option>
+                                        <option value="Brinquedos e Hobbies">Brinquedos e Hobbies</option>
+                                        <option value="Beleza e Cuidado Pessoal">Beleza e Cuidado Pessoal</option>
+                                        <option value="Acessórios para Veículos">Acessórios para Veículos</option>
+                                        <option value="Outros">Outros</option>
+                                    </select>
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="adCond">Condição *</label>
+                                    <select id="adCond" class="form-control" required>
+                                        <option value="Novo">Novo</option>
+                                        <option value="Seminovo (Na caixa)">Seminovo (Na caixa)</option>
+                                        <option value="Open Box (Vitrine)">Open Box (Vitrine)</option>
+                                        <option value="Usado - Excelente">Usado - Excelente</option>
+                                        <option value="Usado - Bom">Usado - Bom</option>
+                                        <option value="Usado - Aceitável">Usado - Aceitável</option>
+                                        <option value="Caixa Amassada">Caixa Amassada</option>
+                                        <option value="Com defeito / Peças">Com defeito / Peças</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <h2 class="card-title">Preço e Estoque</h2>
+                            <div class="row">
+                                <div class="form-group flex-1">
+                                    <label for="adPrice">Valor de Venda (R$) *</label>
+                                    <input type="number" id="adPrice" class="form-control form-lg price-input"
+                                        step="0.01" min="1" placeholder="0,00" required>
+                                </div>
+                                <div class="form-group flex-1">
+                                    <label for="adStock">Quantidade em estoque *</label>
+                                    <input type="number" id="adStock" class="form-control form-lg" min="1" value="1"
+                                        required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <h2 class="card-title">Variações (Opcional)</h2>
+                            <p class="color-mute mb-2">Ex: Cores, Memória, Voltagem...</p>
+                            <div id="variationsContainer">
+                                <!-- Variações serão adicionadas aqui -->
+                            </div>
+                            <button type="button" class="btn-secondary btn-sm mt-2" onclick="addVariationRow()">+
+                                Adicionar Atributo</button>
+                        </div>
+
+                        <div class="card mt-4">
+                            <h2 class="card-title">Destaque</h2>
+                            <div class="form-group mt-3 flex-row align-center">
+                                <input type="checkbox" id="adUrgent" class="checkbox-custom">
+                                <label for="adUrgent" class="ml-2 pointer">🔥 Estoque crítico (Adicionar badge "Últimas
+                                    unidades")</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coluna Direita: Fotos e Publicação -->
+                    <div class="col-side">
+                        <div class="card">
+                            <h2 class="card-title">Fotos do Produto (Até 10) *</h2>
+                            <p class="color-mute" style="font-size: 0.85rem; margin-bottom: 15px;">A primeira foto será
+                                a principal. Use fotos claras.</p>
+
+                            <div class="photos-grid-admin" id="photosGrid">
+                                <!-- Slots gerados via JS -->
+                            </div>
+                            <input type="file" id="multiImageInput" accept="image/*" multiple hidden>
+                        </div>
+
+                        <div class="publish-card">
+                            <button type="submit" class="btn-primary btn-block btn-lg" id="btnSubmit">Publicar
+                                Anúncio</button>
+                            <button type="button" class="btn-secondary btn-block mt-2"
+                                onclick="switchView('view-list')">Cancelar</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="toast"></div>
+
+    <script src="admin.js"></script>
+</body>
+
+</html>

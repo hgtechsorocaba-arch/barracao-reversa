@@ -1,0 +1,390 @@
+// admin.js
+// Lógica para o novo Painel do Vendedor
+
+const CONFIG = {
+    adminPassword: 'Everton2023@' // Deve ser a mesma do app.js original
+};
+
+// ── STATE ────────────────────────────────────────────
+let products = [];
+let imagesBase64 = new Array(10).fill(null);
+let variations = [];
+let editingId = null; // Guardar ID do produto sendo editado
+
+// ── INIT & AUTH ──────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    // Check login state nas sessões (evita relogar a cada F5)
+    if (sessionStorage.getItem('br_admin_logged') === 'true') {
+        showDashboard();
+    }
+});
+
+document.getElementById('btnLogin').addEventListener('click', attemptLogin);
+document.getElementById('adminPass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') attemptLogin();
+});
+
+document.getElementById('togglePass').addEventListener('click', function () {
+    const passInput = document.getElementById('adminPass');
+    const type = passInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passInput.setAttribute('type', type);
+    this.textContent = type === 'password' ? '👁️' : '🕶️';
+});
+
+document.getElementById('btnLogout').addEventListener('click', (e) => {
+    e.preventDefault();
+    sessionStorage.removeItem('br_admin_logged');
+    location.reload();
+});
+
+function attemptLogin() {
+    const pw = document.getElementById('adminPass').value;
+    if (pw === CONFIG.adminPassword) {
+        sessionStorage.setItem('br_admin_logged', 'true');
+        showDashboard();
+    } else {
+        showToast('❌ Senha incorreta.');
+        document.getElementById('adminPass').value = '';
+        document.getElementById('adminPass').focus();
+    }
+}
+
+function showDashboard() {
+    document.getElementById('loginOverlay').classList.add('hidden');
+    document.getElementById('dashboard').style.display = 'flex';
+    initPhotoSlots();
+    loadProducts();
+    renderTable();
+}
+
+// ── NAVIGATION (TABS) ────────────────────────────────
+document.querySelectorAll('.nav-item[data-view]').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchView(tab.dataset.view);
+    });
+});
+
+function switchView(viewId) {
+    // Update nav classes
+    document.querySelectorAll('.nav-item[data-view]').forEach(t => t.classList.remove('active'));
+    const targetTab = document.querySelector(`.nav-item[data-view="${viewId}"]`);
+    if (targetTab) targetTab.classList.add('active');
+
+    // Mudar divs de visualização
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+
+    // Se voltar pra lista, limpa o form e recarrega itens
+    if (viewId === 'view-list') {
+        renderTable();
+        resetForm();
+    }
+}
+
+function resetForm() {
+    editingId = null;
+    document.getElementById('formAd').reset();
+    document.getElementById('view-create').querySelector('h1').textContent = 'Cadastrar Produto';
+    document.getElementById('btnSubmit').textContent = 'Publicar Anúncio';
+
+    imagesBase64 = new Array(10).fill(null);
+    renderPhotoSlots();
+
+    variations = [];
+    renderVariations();
+}
+
+// ── PHOTO SLOTS LOGIC ────────────────────────────────
+function initPhotoSlots() {
+    renderPhotoSlots();
+    document.getElementById('multiImageInput').addEventListener('change', handleMultiUpload);
+
+    // Global drag handling to prevent browser open
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        document.addEventListener(evt, e => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    });
+}
+
+function renderPhotoSlots() {
+    const grid = document.getElementById('photosGrid');
+    grid.innerHTML = imagesBase64.map((img, i) => `
+        <div class="photo-slot ${img ? 'has-image' : ''}" 
+             onclick="triggerSlotUpload(${i})"
+             ondragover="handleSlotDragOver(event, this)"
+             ondragleave="handleSlotDragLeave(event, this)"
+             ondrop="handleSlotDrop(event, ${i}, this)">
+            
+            ${img ? `<img src="${img}">` : `<div class="slot-placeholder">+</div>`}
+            
+            <button type="button" class="btn-url-slot" title="Colar URL da imagem" onclick="triggerUrlUpload(event, ${i})">🔗</button>
+            
+            ${img ? `<button type="button" class="btn-remove-slot" onclick="removeSlotImg(event, ${i})">✖</button>` : ''}
+            
+            <div class="slot-label">${i === 0 ? 'Principal' : `Foto ${i + 1}`}</div>
+        </div>
+    `).join('');
+}
+
+let activeSlotIndex = null;
+window.triggerSlotUpload = function (index) {
+    activeSlotIndex = index;
+    document.getElementById('multiImageInput').click();
+};
+
+window.triggerUrlUpload = function (e, index) {
+    e.stopPropagation();
+    const url = prompt('Cole o endereço (URL) da imagem aqui:');
+    if (url && (url.startsWith('http') || url.startsWith('data:'))) {
+        imagesBase64[index] = url;
+        renderPhotoSlots();
+    } else if (url) {
+        showToast('❌ URL inválida.');
+    }
+};
+
+window.handleSlotDragOver = function (e, el) {
+    e.preventDefault();
+    el.classList.add('drag-over');
+};
+
+window.handleSlotDragLeave = function (e, el) {
+    el.classList.remove('drag-over');
+};
+
+window.handleSlotDrop = function (e, index, el) {
+    e.preventDefault();
+    el.classList.remove('drag-over');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        if (!file.type.startsWith('image/')) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            imagesBase64[index] = event.target.result;
+            renderPhotoSlots();
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+function handleMultiUpload(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    files.forEach((file, idx) => {
+        let targetIndex = activeSlotIndex !== null ? activeSlotIndex : imagesBase64.findIndex(slot => !slot);
+        if (targetIndex === -1) return;
+        if (activeSlotIndex !== null && idx > 0) return;
+
+        if (!file.type.startsWith('image/')) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            if (activeSlotIndex !== null) {
+                imagesBase64[activeSlotIndex] = event.target.result;
+            } else {
+                const nextEmpty = imagesBase64.findIndex(slot => !slot);
+                if (nextEmpty !== -1) imagesBase64[nextEmpty] = event.target.result;
+            }
+            renderPhotoSlots();
+            activeSlotIndex = null;
+        };
+        reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+}
+
+window.removeSlotImg = function (e, index) {
+    e.stopPropagation();
+    imagesBase64[index] = null;
+    renderPhotoSlots();
+};
+
+// ── VARIATIONS LOGIC ────────────────────────────────
+window.addVariationRow = function () {
+    variations.push({ name: '', values: '' });
+    renderVariations();
+};
+
+window.removeVariation = function (index) {
+    variations.splice(index, 1);
+    renderVariations();
+};
+
+function renderVariations() {
+    const container = document.getElementById('variationsContainer');
+    container.innerHTML = variations.map((v, i) => `
+        <div class="variation-row">
+            <button type="button" class="btn-remove-var" onclick="removeVariation(${i})">✖</button>
+            <div class="variation-header">
+                <input type="text" class="form-control" placeholder="Nome (ex: Cor)" value="${v.name}" oninput="updateVar(${i}, 'name', this.value)">
+                <input type="text" class="form-control flex-1" placeholder="Opções (ex: Azul, Verde)" value="${v.values}" oninput="updateVar(${i}, 'values', this.value)">
+            </div>
+            <small class="color-mute">Separe os valores por vírgula.</small>
+        </div>
+    `).join('');
+}
+
+window.updateVar = function (index, field, val) {
+    variations[index][field] = val;
+};
+
+// ── CRUD LOGIC ───────────────────────────────────────
+function loadProducts() {
+    // Carrega apenas os itens customizados (criados pelo user)
+    const stored = localStorage.getItem('br_products');
+    products = stored ? JSON.parse(stored) : [];
+}
+
+function saveProducts() {
+    localStorage.setItem('br_products', JSON.stringify(products));
+}
+
+function renderTable() {
+    const tbody = document.getElementById('adsTbody');
+    const emptyState = document.getElementById('emptyAds');
+
+    // Filtro de busca (opcional)
+    const q = document.getElementById('searchAds').value.toLowerCase();
+    const filtered = products.filter(p => !p.id.startsWith('demo-') && (p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)));
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+
+    tbody.innerHTML = filtered.sort((a, b) => b.createdAt - a.createdAt).map(p => {
+        // Compatibilidade: se não tem array de images, usa p.image
+        const thumb = p.images && p.images.length > 0 ? p.images[0] : p.image;
+
+        return `
+            <tr>
+                <td><img src="${thumb}" class="td-img" onerror="this.src='data:image/svg+xml,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'48\\\' height=\\\'48\\\'><rect width=\\\'100%\\\' height=\\\'100%\\\' fill=\\\'%23eee\\\'/></svg>'" /></td>
+                <td>
+                    <div class="td-title">${p.name}</div>
+                    <div class="td-desc">REF: #${p.id.split('-')[1]} • ${p.category}</div>
+                </td>
+                <td style="font-weight: 600;">R$ ${parseFloat(p.price).toFixed(2).replace('.', ',')}</td>
+                <td><span class="badge-stock">${p.stock} un.</span></td>
+                <td>
+                    <div style="display:flex; gap: 8px;">
+                        <button class="btn-danger" style="color:var(--ml-blue)" onclick="editAd('${p.id}')">Editar</button>
+                        <button class="btn-danger" style="color:red" onclick="deleteAd('${p.id}')">Excluir</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+document.getElementById('searchAds').addEventListener('input', renderTable);
+
+window.editAd = function (id) {
+    const p = products.find(prod => prod.id === id);
+    if (!p) return;
+
+    editingId = id;
+    switchView('view-create');
+
+    // Preencher campos
+    document.getElementById('adName').value = p.name;
+    document.getElementById('adDesc').value = p.description;
+    document.getElementById('adCat').value = p.category;
+    document.getElementById('adCond').value = p.condition;
+    document.getElementById('adPrice').value = p.price;
+    document.getElementById('adStock').value = p.stock || 1;
+    document.getElementById('adUrgent').checked = p.urgent || false;
+
+    // Carregar Fotos
+    imagesBase64 = new Array(10).fill(null);
+    if (p.images && p.images.length) {
+        p.images.forEach((img, i) => { if (i < 10) imagesBase64[i] = img; });
+    } else if (p.image) {
+        imagesBase64[0] = p.image;
+    }
+    renderPhotoSlots();
+
+    // Carregar Variações
+    variations = p.variations || [];
+    renderVariations();
+
+    // UI Feedback
+    document.getElementById('view-create').querySelector('h1').textContent = 'Editar Anúncio';
+    document.getElementById('btnSubmit').textContent = 'Salvar Alterações';
+};
+
+window.deleteAd = function (id) {
+    if (confirm('Excluir anúncio?')) {
+        products = products.filter(p => p.id !== id);
+        saveProducts();
+        renderTable();
+        showToast('🗑️ Removido!');
+    }
+};
+
+document.getElementById('formAd').addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    // Filtra apenas fotos preenchidas
+    const finalImages = imagesBase64.filter(img => img !== null);
+
+    if (finalImages.length === 0) {
+        showToast('❌ Adicione pelo menos uma foto!');
+        return;
+    }
+
+    const priceInput = document.getElementById('adPrice').value;
+    const priceFloat = parseFloat(priceInput.replace(',', '.'));
+
+    const adData = {
+        name: document.getElementById('adName').value.trim(),
+        description: document.getElementById('adDesc').value.trim(),
+        category: document.getElementById('adCat').value,
+        condition: document.getElementById('adCond').value,
+        price: priceFloat,
+        stock: parseInt(document.getElementById('adStock').value, 10),
+        urgent: document.getElementById('adUrgent').checked,
+        images: finalImages,
+        image: finalImages[0], // Capa principal (compatibilidade)
+        variations: variations.filter(v => v.name.trim() !== ''),
+        updatedAt: Date.now()
+    };
+
+    if (editingId) {
+        // UPDATE
+        const idx = products.findIndex(p => p.id === editingId);
+        if (idx !== -1) {
+            products[idx] = { ...products[idx], ...adData };
+            showToast('✅ Atualizado!');
+        }
+    } else {
+        // CREATE
+        const newProduct = {
+            id: 'prod-' + Date.now().toString(36),
+            ...adData,
+            createdAt: Date.now()
+        };
+        products.push(newProduct);
+        showToast('✅ Publicado!');
+    }
+
+    saveProducts();
+    switchView('view-list');
+});
+
+// ── TOAST HELPER ─────────────────────────────────────
+function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
