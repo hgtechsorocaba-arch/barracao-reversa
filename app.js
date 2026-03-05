@@ -203,7 +203,7 @@ function renderProducts(list) {
 
             const baseUrl = window.location.origin;
             const productUrl = `${baseUrl}/?p=${p.id}`;
-            const shareText = `📦 *${CONFIG.storeName}*\n\n*${p.name}*\n💰 ${formatPrice(p.price)}\n✅ ${p.condition || 'Seminovo'} · 100% testado\n\n━━━━━━━━━━━━━━━━\n🛒 *COMPRAR AGORA:*\n${productUrl}`;
+            const shareText = `*${p.name}*\n\n💰 *${formatPrice(p.price)}*\n🔒 Pagamento total via PIX\n\n📲 Clique em *Comprar* → preencha seus dados → pague via PIX\n⚡ Garanta o seu antes que acabe!\n\n🛒 *COMPRAR:* ${productUrl}\n\n_Compra rápida e segura via PIX_`;
 
             // Tenta usar a Web Share API (compartilha a foto diretamente no WhatsApp)
             if (navigator.share && p.image && !p.image.startsWith('data:')) {
