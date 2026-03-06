@@ -446,32 +446,63 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
     const name = document.getElementById('userName').value.trim();
     const phone = document.getElementById('userPhone').value.trim();
 
-    if (!name || !phone) {
-        showToast('⚠️ Preencha seu nome e WhatsApp');
+    const email = document.getElementById('userEmail').value.trim();
+
+    if (!name || !phone || !email) {
+        showToast('⚠️ Preencha nome, e-mail e WhatsApp');
         return;
     }
 
-    const deliveryMsg = `📍 *Retirada:* No local (Bairro Link)`;
+    const btn = document.getElementById('btnConfirmOrder');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Processando...';
+    }
+
+    const deliveryMsg = `Retirada: No local (Bairro Link)`;
 
     const varText = Object.entries(selectedVariations).length > 0
-        ? `\n📋 *Opções:* ${Object.entries(selectedVariations).map(([k, v]) => `${k}: ${v}`).join(', ')}`
+        ? ` (${Object.entries(selectedVariations).map(([k, v]) => `${k}: ${v}`).join(', ')})`
         : '';
 
-    const message = `Olá! Quero comprar o seguinte produto:
-    
-🛍️ *${currentProduct.name}*${varText}
-💰 Preço: *R$ ${parseFloat(currentProduct.price).toFixed(2).replace('.', ',')}*
+    const payload = {
+        productId: currentProduct.id,
+        productName: currentProduct.name + varText,
+        price: currentProduct.price,
+        customerName: name,
+        customerEmail: email,
+        customerPhone: phone,
+        delivery: deliveryMsg,
+        address: ''
+    };
 
-👤 *Cliente:* ${name}
-📞 *Contato:* ${phone}
-${deliveryMsg}
-
----
-Estou enviando meu pedido agora para conferir disponibilidade e pagar via PIX.`;
-
-    const zapLink = `https://wa.me/5515996966956?text=${encodeURIComponent(message)}`;
-    window.open(zapLink, '_blank');
-    closeCheckout();
+    fetch('/api/create-order', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.checkoutUrl) {
+                window.location.href = data.checkoutUrl;
+            } else {
+                showToast('❌ Erro ao gerar link de pagamento: ' + (data.error || 'Desconhecido'));
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = 'Finalizar Compra';
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Erro no checkout:', err);
+            showToast('❌ Ocorreu um erro. Tente novamente.');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Finalizar Compra';
+            }
+        });
 });
 
 
