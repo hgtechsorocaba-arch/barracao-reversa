@@ -440,7 +440,7 @@ async function uploadToSupabaseBucket(file) {
         .upload(filePath, file);
 
     if (uploadError) {
-        throw uploadError;
+        throw new Error(uploadError.message || JSON.stringify(uploadError));
     }
 
     const { data } = supabaseClient.storage.from('public-assets').getPublicUrl(filePath);
@@ -459,7 +459,7 @@ document.getElementById('logoInput').addEventListener('change', async (e) => {
         document.getElementById('logoPreview').src = publicUrl;
         showToast('✅ Logo pronta para salvar!');
     } catch (err) {
-        showToast('❌ Erro no upload da logo');
+        showToast('❌ Erro: ' + (err.message || 'Falha no upload'));
         console.error(err);
     }
 });
@@ -507,7 +507,7 @@ document.getElementById('bannerInput').addEventListener('change', async (e) => {
         renderAdminBanners();
         showToast('✅ Banner adicionado!');
     } catch (err) {
-        showToast('❌ Erro no upload do banner');
+        showToast('❌ Erro: ' + (err.message || 'Falha no upload'));
         console.error(err);
     }
 });
