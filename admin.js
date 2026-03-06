@@ -351,6 +351,16 @@ window.deleteAd = async function (id) {
     }
 };
 
+// Helper to convert dataURL to Blob
+function dataURLtoBlob(dataurl) {
+    var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+        bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+}
+
 document.getElementById('formAd').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -358,36 +368,52 @@ document.getElementById('formAd').addEventListener('submit', async (e) => {
     btn.disabled = true;
     btn.textContent = 'Salvando...';
 
-    // Filtra apenas fotos preenchidas
-    const finalImages = imagesBase64.filter(img => img !== null);
-
-    if (finalImages.length === 0) {
-        showToast('❌ Adicione pelo menos uma foto!');
-        btn.disabled = false;
-        btn.textContent = editingId ? 'Salvar Alterações' : 'Publicar Anúncio';
-        return;
-    }
-
-    const priceInput = document.getElementById('adPrice').value;
-    const priceFloat = parseFloat(priceInput.replace(',', '.'));
-
-    const adData = {
-        name: document.getElementById('adName').value.trim(),
-        description: document.getElementById('adDesc').value.trim(),
-        category: document.getElementById('adCat').value,
-        condition: document.getElementById('adCond').value,
-        price: priceFloat,
-        stock: parseInt(document.getElementById('adStock').value, 10),
-        urgent: document.getElementById('adUrgent').checked,
-        images: finalImages,
-        image: finalImages[0], // Capa principal (compatibilidade)
-        variations: variations.filter(v => v.name.trim() !== ''),
-        updated_at: new Date().toISOString()
-    };
+    const finalImages = [];
 
     try {
+        showToast('⏳ Processando imagens...');
+        // Filtra apenas fotos preenchidas e faz o upload se forem base64
+        for (let img of imagesBase64) {
+            if (img === null) continue;
+
+            if (img.startsWith('data:')) {
+                // É um base64 novo, faz upload pro bucket
+                const blob = dataURLtoBlob(img);
+                // Cria um objeto "fake" de arquivo para o helper de upload
+                const file = new File([blob], `produto_${Date.now()}.jpg`, { type: blob.type });
+                const publicUrl = await uploadToSupabaseBucket(file);
+                finalImages.push(publicUrl);
+            } else {
+                // Já é uma URL (ex: editando produto existente)
+                finalImages.push(img);
+            }
+        }
+
+        if (finalImages.length === 0) {
+            showToast('❌ Adicione pelo menos uma foto!');
+            btn.disabled = false;
+            btn.textContent = editingId ? 'Salvar Alterações' : 'Publicar Anúncio';
+            return;
+        }
+
+        const priceInput = document.getElementById('adPrice').value;
+        const priceFloat = parseFloat(priceInput.replace(',', '.'));
+
+        const adData = {
+            name: document.getElementById('adName').value.trim(),
+            description: document.getElementById('adDesc').value.trim(),
+            category: document.getElementById('adCat').value,
+            condition: document.getElementById('adCond').value,
+            price: priceFloat,
+            stock: parseInt(document.getElementById('adStock').value, 10),
+            urgent: document.getElementById('adUrgent').checked,
+            images: finalImages,
+            image: finalImages[0],
+            variations: variations.filter(v => v.name.trim() !== ''),
+            updated_at: new Date().toISOString()
+        };
+
         if (editingId) {
-            // UPDATE
             const { error } = await window.supabaseClient
                 .from('products')
                 .update(adData)
@@ -396,7 +422,6 @@ document.getElementById('formAd').addEventListener('submit', async (e) => {
             if (error) throw error;
             showToast('✅ Atualizado!');
         } else {
-            // CREATE
             const id = 'prod-' + Date.now().toString(36);
             const { error } = await window.supabaseClient
                 .from('products')
@@ -406,11 +431,11 @@ document.getElementById('formAd').addEventListener('submit', async (e) => {
             showToast('✅ Publicado!');
         }
 
-        await loadProducts(); // Recarrega a lista local
+        await loadProducts();
         switchView('view-list');
     } catch (err) {
         console.error('Erro ao salvar produto:', err);
-        showToast('❌ Erro ao salvar no Supabase.');
+        showToast('❌ Erro: ' + (err.message || 'Falha ao salvar.'));
     } finally {
         btn.disabled = false;
         btn.textContent = editingId ? 'Salvar Alterações' : 'Publicar Anúncio';
