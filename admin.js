@@ -528,21 +528,21 @@ document.getElementById('formSettings').addEventListener('submit', async (e) => 
     storeSettings.primary_color = document.getElementById('setPrimaryColor').value;
 
     try {
-        const { error } = await supabaseClient
+        const { error } = await window.supabaseClient
             .from('store_settings')
-            .upsert({
-                id: 1,
+            .update({
                 whatsapp_number: storeSettings.whatsapp_number,
                 primary_color: storeSettings.primary_color,
                 logo_url: storeSettings.logo_url,
                 banners: storeSettings.banners
-            });
+            })
+            .eq('id', 1);
 
         if (error) throw error;
         showToast('✅ Configurações salvas!');
     } catch (err) {
         console.error('Error saving settings:', err);
-        showToast('❌ Erro ao salvar');
+        showToast('❌ Erro: ' + (err.message || 'Erro ao salvar'));
     } finally {
         btn.disabled = false;
         btn.textContent = 'Salvar Configurações';
