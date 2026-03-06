@@ -65,7 +65,9 @@ const CONFIG = {
 - [ ] Galeria de múltiplas fotos por produto
 - [ ] Link de compartilhamento individual por produto (para divulgar no WhatsApp/Instagram)
 - [ ] Integração com Google Sheets para salvar pedidos automaticamente
-- [ ] Integração com Supabase (banco de dados online como o CRM do HG Tech)
+- [x] Integração básica com Supabase (Configurações)
+- [x] Migração do Catálogo de Produtos para Supabase (Banco de Dados Real)
+- [ ] Implementação de Carrinho e Checkout Pro (Mercado Pago)
 - [ ] Status "Vendido" – marcar produto como vendido sem excluir
 - [ ] Mostrar chave PIX + QR Code na tela de checkout
 

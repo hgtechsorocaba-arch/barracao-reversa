@@ -49,11 +49,11 @@ function attemptLogin() {
     }
 }
 
-function showDashboard() {
+async function showDashboard() {
     document.getElementById('loginOverlay').classList.add('hidden');
     document.getElementById('dashboard').style.display = 'flex';
     initPhotoSlots();
-    loadProducts();
+    await loadProducts();
     renderTable();
 }
 
@@ -77,7 +77,7 @@ function switchView(viewId) {
 
     // Se voltar pra lista, limpa o form e recarrega itens
     if (viewId === 'view-list') {
-        renderTable();
+        loadProducts().then(() => renderTable());
         resetForm();
     }
 }
@@ -236,15 +236,23 @@ window.updateVar = function (index, field, val) {
 };
 
 // ── CRUD LOGIC ───────────────────────────────────────
-function loadProducts() {
-    // Carrega apenas os itens customizados (criados pelo user)
-    const stored = localStorage.getItem('br_products');
-    products = stored ? JSON.parse(stored) : [];
+async function loadProducts() {
+    if (!window.supabaseClient) return;
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        products = data || [];
+    } catch (err) {
+        console.error('Erro ao carregar produtos:', err);
+        showToast('❌ Erro ao carregar produtos do banco.');
+    }
 }
 
-function saveProducts() {
-    localStorage.setItem('br_products', JSON.stringify(products));
-}
+// saveProducts não é mais necessário como função global, pois salvamos no submit
 
 function renderTable() {
     const tbody = document.getElementById('adsTbody');
@@ -323,23 +331,40 @@ window.editAd = function (id) {
     document.getElementById('btnSubmit').textContent = 'Salvar Alterações';
 };
 
-window.deleteAd = function (id) {
+window.deleteAd = async function (id) {
     if (confirm('Excluir anúncio?')) {
-        products = products.filter(p => p.id !== id);
-        saveProducts();
-        renderTable();
-        showToast('🗑️ Removido!');
+        try {
+            const { error } = await window.supabaseClient
+                .from('products')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            products = products.filter(p => p.id !== id);
+            renderTable();
+            showToast('🗑️ Removido!');
+        } catch (err) {
+            console.error('Erro ao deletar:', err);
+            showToast('❌ Erro ao excluir do banco.');
+        }
     }
 };
 
-document.getElementById('formAd').addEventListener('submit', (e) => {
+document.getElementById('formAd').addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
 
     // Filtra apenas fotos preenchidas
     const finalImages = imagesBase64.filter(img => img !== null);
 
     if (finalImages.length === 0) {
         showToast('❌ Adicione pelo menos uma foto!');
+        btn.disabled = false;
+        btn.textContent = editingId ? 'Salvar Alterações' : 'Publicar Anúncio';
         return;
     }
 
@@ -357,29 +382,39 @@ document.getElementById('formAd').addEventListener('submit', (e) => {
         images: finalImages,
         image: finalImages[0], // Capa principal (compatibilidade)
         variations: variations.filter(v => v.name.trim() !== ''),
-        updatedAt: Date.now()
+        updated_at: new Date().toISOString()
     };
 
-    if (editingId) {
-        // UPDATE
-        const idx = products.findIndex(p => p.id === editingId);
-        if (idx !== -1) {
-            products[idx] = { ...products[idx], ...adData };
-            showToast('✅ Atualizado!');
-        }
-    } else {
-        // CREATE
-        const newProduct = {
-            id: 'prod-' + Date.now().toString(36),
-            ...adData,
-            createdAt: Date.now()
-        };
-        products.push(newProduct);
-        showToast('✅ Publicado!');
-    }
+    try {
+        if (editingId) {
+            // UPDATE
+            const { error } = await window.supabaseClient
+                .from('products')
+                .update(adData)
+                .eq('id', editingId);
 
-    saveProducts();
-    switchView('view-list');
+            if (error) throw error;
+            showToast('✅ Atualizado!');
+        } else {
+            // CREATE
+            const id = 'prod-' + Date.now().toString(36);
+            const { error } = await window.supabaseClient
+                .from('products')
+                .insert([{ id, ...adData, created_at: new Date().toISOString() }]);
+
+            if (error) throw error;
+            showToast('✅ Publicado!');
+        }
+
+        await loadProducts(); // Recarrega a lista local
+        switchView('view-list');
+    } catch (err) {
+        console.error('Erro ao salvar produto:', err);
+        showToast('❌ Erro ao salvar no Supabase.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = editingId ? 'Salvar Alterações' : 'Publicar Anúncio';
+    }
 });
 
 // ── TOAST HELPER ─────────────────────────────────────

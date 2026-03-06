@@ -94,22 +94,25 @@ const DEMO_PRODUCTS = [
 ];
 
 // ── LOAD / SAVE ──────────────────────────────────────
-function loadProducts() {
+async function loadProducts() {
+    if (!window.supabaseClient) return;
     try {
-        const stored = localStorage.getItem('br_products');
-        const custom = stored ? JSON.parse(stored) : [];
-        products = [...DEMO_PRODUCTS, ...custom];
-    } catch {
-        products = [...DEMO_PRODUCTS];
-    }
-}
+        const { data, error } = await window.supabaseClient
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-function saveCustomProducts() {
-    try {
-        const custom = products.filter(p => !p.id.startsWith('demo-'));
-        localStorage.setItem('br_products', JSON.stringify(custom));
-    } catch (e) {
-        console.warn('localStorage indisponível:', e);
+        if (error) throw error;
+
+        // Se não houver produtos no banco, podemos manter os demos como exemplo
+        if (data && data.length > 0) {
+            products = data;
+        } else {
+            products = [...DEMO_PRODUCTS];
+        }
+    } catch (err) {
+        console.error('Erro ao carregar produtos:', err);
+        products = [...DEMO_PRODUCTS]; // Fallback
     }
 }
 
@@ -610,7 +613,7 @@ async function applyStoreSettings() {
 
 async function init() {
     // Carrega produtos
-    loadProducts();
+    await loadProducts();
     renderProducts(typeof allProducts !== 'undefined' ? allProducts : products);
 
     // Apply Supabase Customizations
