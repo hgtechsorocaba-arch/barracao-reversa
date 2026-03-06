@@ -287,10 +287,11 @@ function openCheckout(id) {
     if (overlay) overlay.classList.add('active', 'full-view');
     document.body.style.overflow = 'hidden';
 
-    if (detailsContainer) detailsContainer.style.display = 'block';
-    if (formContainer) formContainer.style.display = 'none';
+    if (detailsContainer) detailsContainer.style.display = 'none';
+    if (formContainer) formContainer.style.display = 'block';
 
     renderProductDetails(p);
+    showCheckoutForm();
 }
 
 function renderProductDetails(p) {
@@ -444,17 +445,13 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
 
     const name = document.getElementById('userName').value.trim();
     const phone = document.getElementById('userPhone').value.trim();
-    const deliveryType = document.getElementById('deliveryType').value;
-    const address = document.getElementById('userAddress') ? document.getElementById('userAddress').value.trim() : '';
 
     if (!name || !phone) {
         showToast('⚠️ Preencha seu nome e WhatsApp');
         return;
     }
 
-    const deliveryMsg = deliveryType === 'entrega'
-        ? `🚚 *Entrega:* ${address || 'Endereço a combinar'}`
-        : `📍 *Retirada:* No local (Bairro Link)`;
+    const deliveryMsg = `📍 *Retirada:* No local (Bairro Link)`;
 
     const varText = Object.entries(selectedVariations).length > 0
         ? `\n📋 *Opções:* ${Object.entries(selectedVariations).map(([k, v]) => `${k}: ${v}`).join(', ')}`
@@ -477,11 +474,7 @@ Estou enviando meu pedido agora para conferir disponibilidade e pagar via PIX.`;
     closeCheckout();
 });
 
-window.toggleAddressField = function () {
-    const type = document.getElementById('deliveryType').value;
-    const group = document.getElementById('addressGroup');
-    if (group) group.style.display = type === 'entrega' ? 'block' : 'none';
-};
+
 
 // ── TOAST ─────────────────────────────────────────────
 function showToast(msg) {

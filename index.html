@@ -170,16 +170,9 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="deliveryType">Como deseja receber? *</label>
-                    <select id="deliveryType" onchange="toggleAddressField()">
-                        <option value="retirada">Vou retirar no local (Bairro Link)</option>
-                        <option value="entrega">Quero que entregue (Consultar taxa)</option>
-                    </select>
-                </div>
-
-                <div class="form-group" id="addressGroup" style="display: none;">
-                    <label for="userAddress">Endereço de Entrega *</label>
-                    <textarea id="userAddress" placeholder="Rua, número, bairro e cidade"></textarea>
+                    <label>COMO DESEJA RECEBER? *</label>
+                    <input type="text" value="Vou retirar no local (Bairro Link)" readonly
+                        style="background: #f0f0f0; color: #555; cursor: not-allowed; border-color: #ddd;">
                 </div>
 
                 <div class="payment-info-box">
