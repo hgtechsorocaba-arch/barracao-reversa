@@ -550,29 +550,38 @@ a {
 
 .card-price-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   margin-top: auto;
   gap: 8px;
   flex-wrap: wrap;
 }
 
+.card-price-original {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-decoration: line-through;
+  margin-bottom: -2px;
+}
+
 .card-price {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 900;
   color: var(--primary);
+  line-height: 1.1;
 }
 
 .card-pix {
-  font-size: .7rem;
+  font-size: .65rem;
   color: var(--text-secondary);
+  margin-top: 2px;
 }
 
 .card-footer {
   padding: 0 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .card-footer-actions {
@@ -629,19 +638,26 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-card);
-  color: var(--text-secondary);
+  background: #2a2a2a;
+  color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0 14px;
+  padding: 0 12px;
   cursor: pointer;
   transition: all .2s;
+  height: 48px;
+  /* Mantém altura com o botão de compra */
 }
 
 .btn-share:hover {
-  background: var(--border);
-  color: var(--text);
+  background: #333;
+  border-color: var(--primary);
+  color: var(--primary);
   transform: scale(1.05);
+}
+
+.btn-share svg {
+  opacity: 0.9;
 }
 
 /* ── EMPTY STATE ──────────────────────────── */

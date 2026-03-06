@@ -118,6 +118,12 @@ function formatPrice(value) {
     return 'R$ ' + parseFloat(value).toFixed(2).replace('.', ',');
 }
 
+function calcOriginalPrice(price) {
+    // Preço original ~33% acima do preço de venda (arredondado para .90)
+    const raw = parseFloat(price) * 1.33;
+    return Math.ceil(raw / 10) * 10 - 0.10;
+}
+
 function stockLabel(stock) {
     if (stock === 0) return { text: '❌ Esgotado', cls: 'badge-out' };
     if (stock === 1) return { text: '⚠️ Último!', cls: 'badge-low' };
@@ -154,7 +160,8 @@ function renderProducts(list) {
         <div class="card-condition">✅ ${p.condition}</div>
         <div class="card-price-row">
           <div>
-            <div class="card-price">${formatPrice(p.price)}</div>
+            <div class="card-price-original">De ${formatPrice(calcOriginalPrice(p.price))}</div>
+            <div class="card-price">Por ${formatPrice(p.price)}</div>
             <div class="card-pix">💰 Pagamento via PIX</div>
           </div>
           <span class="stock-badge ${sl.cls}">${sl.text}</span>
@@ -168,7 +175,7 @@ function renderProducts(list) {
             ${sold ? 'Esgotado' : 'Comprar'}
           </button>
           <button class="btn-share" data-id="${p.id}" aria-label="Compartilhar no WhatsApp" title="Enviar para um amigo">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M13.5 18l-1.5-1.5 4.5-4.5H3v-2h13.5l-4.5-4.5L14 4l8 8-8 8z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
           </button>
         </div>
       </div>
