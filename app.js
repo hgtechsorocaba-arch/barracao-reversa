@@ -540,10 +540,75 @@ if (phoneInp) {
 }
 
 // ── INIT ──────────────────────────────────────────────
-(function init() {
+async function applyStoreSettings() {
+    if (typeof supabaseClient === 'undefined') return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('store_settings')
+            .select('*')
+            .eq('id', 1)
+            .single();
+
+        if (error || !data) return;
+
+        // 1. WhatsApp
+        if (data.whatsapp_number) {
+            CONFIG.whatsappNumber = data.whatsapp_number;
+            // Update links if necessary
+            document.querySelectorAll('a[href^="https://wa.me/"]').forEach(a => {
+                const url = new URL(a.href);
+                url.pathname = '/' + data.whatsapp_number;
+                a.href = url.toString();
+            });
+        }
+
+        // 2. Primary Color Overrides
+        if (data.primary_color && data.primary_color !== '#1e2a3a') {
+            const root = document.querySelector(':root');
+            root.style.setProperty('--primary', data.primary_color);
+            // Rough approximation for dark variant just for this custom override
+            root.style.setProperty('--primary-dark', data.primary_color);
+        }
+
+        // 3. Logo
+        if (data.logo_url) {
+            document.querySelectorAll('.logo-img-header, .logo-img-footer').forEach(img => {
+                img.src = data.logo_url;
+            });
+        }
+
+        // 4. Banners
+        if (data.banners && data.banners.length > 0) {
+            const slider = document.getElementById('bannerSlider');
+            if (slider) {
+                slider.innerHTML = data.banners.map(url => `
+                    <div class="banner-slide">
+                        <img src="${url}" class="banner-img" alt="Banner Promocional">
+                    </div>
+                `).join('');
+                slider.style.display = 'flex';
+
+                // Add margins around hero to make space for banners if we keep both
+                const hero = document.querySelector('.hero');
+                if (hero) hero.style.display = 'none'; // hide hero if there are banners? Or show both. Let's hide the big hero if there are custom banners, because banners are usually intended as a replacement for the hero real estate.
+            }
+        }
+
+    } catch (err) {
+        console.error('Failed to apply store settings:', err);
+    }
+}
+
+async function init() {
+    // Carrega produtos
     loadProducts();
     renderProducts(typeof allProducts !== 'undefined' ? allProducts : products);
 
+    // Apply Supabase Customizations
+    await applyStoreSettings();
+
+    // Check custom URLs
     const urlParams = new URLSearchParams(window.location.search);
     const productId = urlParams.get('p');
     if (productId) {
@@ -552,4 +617,6 @@ if (phoneInp) {
             window.history.replaceState({}, document.title, window.location.pathname);
         }, 500);
     }
-})();
+}
+
+init();

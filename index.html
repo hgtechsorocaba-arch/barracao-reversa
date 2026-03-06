@@ -20,6 +20,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
 </head>
 
 <body>
@@ -99,120 +102,123 @@
                 <p>Seu pedido vai direto para nosso WhatsApp. Pague via <strong>PIX</strong> e pronto!</p>
             </div>
         </div>
-    </section>
+        <!-- BANNERS SLIDER -->
+        <div id="bannerSlider" class="banner-slider" style="display: none;"></div>
 
-    <!-- PRODUTOS -->
-    <section id="produtos" class="products-section">
-        <div class="products-header">
-            <h2 class="section-title">Produtos Disponíveis</h2>
-            <div class="filter-bar">
-                <input class="search-input" id="searchInput" type="text" placeholder="🔍 Buscar produto..." />
-                <select class="category-select" id="categorySelect">
-                    <option value="Celulares e Smartphones">Celulares e Smartphones</option>
-                    <option value="Informática e Acessórios">Informática e Acessórios</option>
-                    <option value="Games e Consoles">Games e Consoles</option>
-                    <option value="Placas mãe e Vídeo">Placas mãe e Vídeo</option>
-                    <option value="Processadores">Processadores</option>
-                    <option value="Memórias">Memórias</option>
-                    <option value="Armazenamento (HD/SSD)">Armazenamento (HD/SSD)</option>
-                    <option value="Fontes de energia">Fontes de energia</option>
-                    <option value="Periféricos e Acessórios">Periféricos e Acessórios</option>
-                    <option value="Controladores / Industrial">Controladores / Industrial</option>
-                    <option value="Roteadores / Rede">Roteadores / Rede</option>
-                    <option value="Eletrônicos, Áudio e Vídeo">Eletrônicos, Áudio e Vídeo</option>
-                    <option value="TV e Vídeo">TV e Vídeo</option>
-                    <option value="Câmeras e Foto">Câmeras e Foto</option>
-                    <option value="Eletrodomésticos">Eletrodomésticos</option>
-                    <option value="Ferramentas">Ferramentas</option>
-                    <option value="Esportes e Fitness">Esportes e Fitness</option>
-                    <option value="Brinquedos e Hobbies">Brinquedos e Hobbies</option>
-                    <option value="Beleza e Cuidado Pessoal">Beleza e Cuidado Pessoal</option>
-                    <option value="Acessórios para Veículos">Acessórios para Veículos</option>
-                    <option value="Outros">Outros</option>
-                </select>
-            </div>
-        </div>
-        <div class="products-grid" id="productsGrid">
-            <!-- Cards injetados por JS -->
-        </div>
-        <div class="empty-state" id="emptyState" style="display:none;">
-            <div class="empty-icon">📦</div>
-            <p>Nenhum produto encontrado.</p>
-            <small>Tente outro filtro ou <a href="https://wa.me/5515999999999" target="_blank">fale conosco</a>.</small>
-        </div>
-    </section>
+        <!-- PRODUTOS -->
+        <section id="produtos" class="products-section">
+            <main class="catalog-container container">
+                <div class="products-header">
+                    <h2 class="section-title">Produtos Disponíveis</h2>
+                    <div class="filter-bar">
+                        <input class="search-input" id="searchInput" type="text" placeholder="🔍 Buscar produto..." />
+                        <select class="category-select" id="categorySelect">
+                            <option value="Celulares e Smartphones">Celulares e Smartphones</option>
+                            <option value="Informática e Acessórios">Informática e Acessórios</option>
+                            <option value="Games e Consoles">Games e Consoles</option>
+                            <option value="Placas mãe e Vídeo">Placas mãe e Vídeo</option>
+                            <option value="Processadores">Processadores</option>
+                            <option value="Memórias">Memórias</option>
+                            <option value="Armazenamento (HD/SSD)">Armazenamento (HD/SSD)</option>
+                            <option value="Fontes de energia">Fontes de energia</option>
+                            <option value="Periféricos e Acessórios">Periféricos e Acessórios</option>
+                            <option value="Controladores / Industrial">Controladores / Industrial</option>
+                            <option value="Roteadores / Rede">Roteadores / Rede</option>
+                            <option value="Eletrônicos, Áudio e Vídeo">Eletrônicos, Áudio e Vídeo</option>
+                            <option value="TV e Vídeo">TV e Vídeo</option>
+                            <option value="Câmeras e Foto">Câmeras e Foto</option>
+                            <option value="Eletrodomésticos">Eletrodomésticos</option>
+                            <option value="Ferramentas">Ferramentas</option>
+                            <option value="Esportes e Fitness">Esportes e Fitness</option>
+                            <option value="Brinquedos e Hobbies">Brinquedos e Hobbies</option>
+                            <option value="Beleza e Cuidado Pessoal">Beleza e Cuidado Pessoal</option>
+                            <option value="Acessórios para Veículos">Acessórios para Veículos</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="products-grid" id="productsGrid">
+                    <!-- Cards injetados por JS -->
+                </div>
+                <div class="empty-state" id="emptyState" style="display:none;">
+                    <div class="empty-icon">📦</div>
+                    <p>Nenhum produto encontrado.</p>
+                    <small>Tente outro filtro ou <a href="https://wa.me/5515999999999" target="_blank">fale
+                            conosco</a>.</small>
+                </div>
+        </section>
 
-    <!-- CHECKOUT MODAL -->
-    <div class="modal-overlay" id="checkoutModal">
-        <!-- View 1: Detalhes do Produto (HG Tech / ML Style) -->
-        <div id="productDetailsView">
-            <!-- Renderizado dinamicamente via app.js -->
-        </div>
-
-        <!-- View 2: Formulário de Checkout -->
-        <div id="checkoutFormView" style="display: none;">
-            <button class="modal-close-btn" onclick="closeCheckout()">✕</button>
-
-            <div id="checkoutSummary">
-                <!-- Miniatura do produto e variações escolhidas -->
+        <!-- CHECKOUT MODAL -->
+        <div class="modal-overlay" id="checkoutModal">
+            <!-- View 1: Detalhes do Produto (HG Tech / ML Style) -->
+            <div id="productDetailsView">
+                <!-- Renderizado dinamicamente via app.js -->
             </div>
 
-            <h2 class="modal-title">Finalizar Pedido</h2>
-            <form id="checkoutForm">
-                <div class="form-group">
-                    <label for="userName">Seu Nome Completo *</label>
-                    <input type="text" id="userName" placeholder="Ex: João Silva" required>
+            <!-- View 2: Formulário de Checkout -->
+            <div id="checkoutFormView" style="display: none;">
+                <button class="modal-close-btn" onclick="closeCheckout()">✕</button>
+
+                <div id="checkoutSummary">
+                    <!-- Miniatura do produto e variações escolhidas -->
                 </div>
 
-                <div class="form-group">
-                    <label for="userEmail">Seu E-mail *</label>
-                    <input type="email" id="userEmail" placeholder="seu@email.com" required>
-                </div>
+                <h2 class="modal-title">Finalizar Pedido</h2>
+                <form id="checkoutForm">
+                    <div class="form-group">
+                        <label for="userName">Seu Nome Completo *</label>
+                        <input type="text" id="userName" placeholder="Ex: João Silva" required>
+                    </div>
 
-                <div class="form-group">
-                    <label for="userPhone">WhatsApp com DDD *</label>
-                    <input type="tel" id="userPhone" placeholder="(15) 99999-9999" required>
-                </div>
+                    <div class="form-group">
+                        <label for="userEmail">Seu E-mail *</label>
+                        <input type="email" id="userEmail" placeholder="seu@email.com" required>
+                    </div>
 
-                <div class="form-group">
-                    <label>COMO DESEJA RECEBER? *</label>
-                    <input type="text" value="Vou retirar no local (Bairro Link)" readonly
-                        style="background: #f0f0f0; color: #555; cursor: not-allowed; border-color: #ddd;">
-                </div>
+                    <div class="form-group">
+                        <label for="userPhone">WhatsApp com DDD *</label>
+                        <input type="tel" id="userPhone" placeholder="(15) 99999-9999" required>
+                    </div>
 
-                <div class="payment-info-box">
-                    <div class="pix-label">💰 Pagamento Seguro</div>
-                    <p>O pagamento será processado de forma segura pelo Mercado Pago.</p>
-                </div>
+                    <div class="form-group">
+                        <label>COMO DESEJA RECEBER? *</label>
+                        <input type="text" value="Vou retirar no local (Bairro Link)" readonly
+                            style="background: #f0f0f0; color: #555; cursor: not-allowed; border-color: #ddd;">
+                    </div>
 
-                <button type="submit" class="btn-confirm-order" id="btnConfirmOrder">
-                    Finalizar Compra
-                </button>
-            </form>
-        </div>
-    </div>
+                    <div class="payment-info-box">
+                        <div class="pix-label">💰 Pagamento Seguro</div>
+                        <p>O pagamento será processado de forma segura pelo Mercado Pago.</p>
+                    </div>
 
-
-
-    <!-- TOAST -->
-    <div class="toast" id="toast"></div>
-
-    <!-- FOOTER -->
-    <footer class="footer">
-        <div class="footer-inner">
-            <div class="footer-logo">
-                <img src="logo.png" alt="Logo" class="logo-img-footer">
-                <span>Barracão Reversa</span>
+                    <button type="submit" class="btn-confirm-order" id="btnConfirmOrder">
+                        Finalizar Compra
+                    </button>
+                </form>
             </div>
-            <p>Eletrônicos usados e revisados com qualidade e preço justo.</p>
-            <a href="https://wa.me/5515996966956" target="_blank" class="footer-whatsapp">
-                📲 (15) 99696-6956
-            </a>
-            <p class="footer-copy">© 2025 Barracão Reversa · Todos os direitos reservados</p>
         </div>
-    </footer>
 
-    <script src="app.js"></script>
+
+
+        <!-- TOAST -->
+        <div class="toast" id="toast"></div>
+
+        <!-- FOOTER -->
+        <footer class="footer">
+            <div class="footer-inner">
+                <div class="footer-logo">
+                    <img src="logo.png" alt="Logo" class="logo-img-footer">
+                    <span>Barracão Reversa</span>
+                </div>
+                <p>Eletrônicos usados e revisados com qualidade e preço justo.</p>
+                <a href="https://wa.me/5515996966956" target="_blank" class="footer-whatsapp">
+                    📲 (15) 99696-6956
+                </a>
+                <p class="footer-copy">© 2025 Barracão Reversa · Todos os direitos reservados</p>
+            </div>
+        </footer>
+
+        <script src="app.js"></script>
 </body>
 
 </html>

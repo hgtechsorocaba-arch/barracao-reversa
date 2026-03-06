@@ -9,6 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="admin.css">
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
 </head>
 
 <body>
@@ -51,6 +55,13 @@
                         <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
                     </svg>
                     Novo Anúncio
+                </a>
+                <a href="#" class="nav-item" data-view="view-settings">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path
+                            d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.49-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                    </svg>
+                    Configurações
                 </a>
                 <div class="spacer"></div>
                 <a href="/" class="nav-item nav-back">
@@ -239,7 +250,79 @@
                         </div>
                     </div>
                 </form>
-            </div>
+                <!-- VIEW: CONFIGURAÇÕES -->
+                <div id="view-settings" class="view">
+                    <div class="view-header">
+                        <h1>Configurações da Loja</h1>
+                    </div>
+
+                    <form id="formSettings" class="form-grid">
+                        <div class="col-main">
+                            <!-- Redes e Contato -->
+                            <div class="card">
+                                <h2 class="card-title">Contato e Redes</h2>
+                                <div class="form-group">
+                                    <label for="setWhatsapp">WhatsApp da Loja *</label>
+                                    <input type="text" id="setWhatsapp" class="form-control"
+                                        placeholder="Ex: 5515999999999" required>
+                                    <small class="color-mute">Apenas números, incluindo o código do país (Ex: 55 para
+                                        Brasil).</small>
+                                </div>
+                            </div>
+
+                            <!-- Visual e Identidade -->
+                            <div class="card mt-4">
+                                <h2 class="card-title">Identidade Visual</h2>
+
+                                <div class="form-group mb-3">
+                                    <label for="setPrimaryColor">Cor Principal do Layout</label>
+                                    <div class="flex-row align-center gap-2" style="display: flex; gap: 10px;">
+                                        <input type="color" id="setPrimaryColor" value="#1e2a3a"
+                                            style="width: 50px; height: 40px; border: none; padding: 0;">
+                                        <span id="colorHexDisplay" class="color-mute">#1e2a3a</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Logo da Loja</label>
+                                    <div class="flex-row align-center gap-2"
+                                        style="display: flex; gap: 15px; align-items: center; margin-top: 10px;">
+                                        <img id="logoPreview" src="logo.png"
+                                            style="max-height: 60px; max-width: 150px; object-fit: contain; border: 1px dashed #ccc; padding: 5px; border-radius: 4px;">
+                                        <button type="button" class="btn-secondary btn-sm"
+                                            onclick="document.getElementById('logoInput').click()">Trocar Logo</button>
+                                        <input type="file" id="logoInput" accept="image/png, image/jpeg, image/webp"
+                                            hidden>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Banners Promo -->
+                            <div class="card mt-4">
+                                <h2 class="card-title">Banners Promocionais (Até 5)</h2>
+                                <p class="color-mute mb-3">Tamanho recomendado: 1200x400px. Eles irão deslizar
+                                    automaticamente no topo da página inicial.</p>
+
+                                <div class="banners-grid" id="bannersGrid"
+                                    style="display: flex; flex-direction: column; gap: 15px;">
+                                    <!-- Banners slots gerados por JS -->
+                                </div>
+
+                                <button type="button" class="btn-secondary btn-sm mt-3" id="btnAddBanner"
+                                    onclick="document.getElementById('bannerInput').click()">+ Adicionar Banner</button>
+                                <input type="file" id="bannerInput" accept="image/png, image/jpeg, image/webp" hidden>
+                            </div>
+                        </div>
+
+                        <!-- Coluna Direita: Salvar -->
+                        <div class="col-side">
+                            <div class="publish-card">
+                                <button type="submit" class="btn-primary btn-block btn-lg" id="btnSaveSettings">Salvar
+                                    Configurações</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
         </main>
     </div>
 

@@ -388,3 +388,171 @@ function showToast(msg) {
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 3000);
 }
+
+// ── SETTINGS SUPABASE LOGIC ─────────────────────────────
+let storeSettings = {
+    whatsapp_number: '5515996966956',
+    primary_color: '#1e2a3a',
+    logo_url: 'logo.png',
+    banners: []
+};
+
+async function loadSettings() {
+    if (!window.supabaseClient) return;
+    try {
+        const { data, error } = await supabaseClient
+            .from('store_settings')
+            .select('*')
+            .eq('id', 1)
+            .single();
+
+        if (data) {
+            storeSettings = { ...storeSettings, ...data };
+        }
+    } catch (err) {
+        console.error('Error loading settings:', err);
+    }
+
+    // Fill UI
+    document.getElementById('setWhatsapp').value = storeSettings.whatsapp_number || '';
+    document.getElementById('setPrimaryColor').value = storeSettings.primary_color || '#1e2a3a';
+    document.getElementById('colorHexDisplay').textContent = storeSettings.primary_color || '#1e2a3a';
+
+    if (storeSettings.logo_url) {
+        document.getElementById('logoPreview').src = storeSettings.logo_url;
+    }
+
+    renderAdminBanners();
+}
+
+document.getElementById('setPrimaryColor').addEventListener('input', (e) => {
+    document.getElementById('colorHexDisplay').textContent = e.target.value;
+});
+
+// Upload Help
+async function uploadToSupabaseBucket(file) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabaseClient.storage
+        .from('public-assets')
+        .upload(filePath, file);
+
+    if (uploadError) {
+        throw uploadError;
+    }
+
+    const { data } = supabaseClient.storage.from('public-assets').getPublicUrl(filePath);
+    return data.publicUrl;
+}
+
+// Logo Upload
+document.getElementById('logoInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+        showToast('⏳ Fazendo upload da logo...');
+        const publicUrl = await uploadToSupabaseBucket(file);
+        storeSettings.logo_url = publicUrl;
+        document.getElementById('logoPreview').src = publicUrl;
+        showToast('✅ Logo pronta para salvar!');
+    } catch (err) {
+        showToast('❌ Erro no upload da logo');
+        console.error(err);
+    }
+});
+
+// Banners Logic
+function renderAdminBanners() {
+    const grid = document.getElementById('bannersGrid');
+    const banners = storeSettings.banners || [];
+
+    grid.innerHTML = banners.map((url, i) => `
+        <div style="display: flex; gap: 10px; align-items: center; border: 1px solid #ddd; padding: 10px; border-radius: 6px;">
+            <img src="${url}" style="height: 50px; width: 100px; object-fit: cover; border-radius: 4px;">
+            <div style="flex:1; font-size: 0.8rem; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${url}</div>
+            <button type="button" class="btn-danger btn-sm" onclick="removeAdminBanner(${i})">Remover</button>
+        </div>
+    `).join('');
+
+    const btnAdd = document.getElementById('btnAddBanner');
+    if (banners.length >= 5) {
+        btnAdd.style.display = 'none';
+    } else {
+        btnAdd.style.display = 'inline-block';
+    }
+}
+
+window.removeAdminBanner = function (index) {
+    storeSettings.banners.splice(index, 1);
+    renderAdminBanners();
+};
+
+document.getElementById('bannerInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!storeSettings.banners) storeSettings.banners = [];
+    if (storeSettings.banners.length >= 5) {
+        showToast('Maximo 5 banners atingido.');
+        return;
+    }
+
+    try {
+        showToast('⏳ Fazendo upload do banner...');
+        const publicUrl = await uploadToSupabaseBucket(file);
+        storeSettings.banners.push(publicUrl);
+        renderAdminBanners();
+        showToast('✅ Banner adicionado!');
+    } catch (err) {
+        showToast('❌ Erro no upload do banner');
+        console.error(err);
+    }
+});
+
+// Save Settings
+document.getElementById('formSettings').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!window.supabaseClient) {
+        showToast('❌ Supabase não conectado');
+        return;
+    }
+
+    const btn = document.getElementById('btnSaveSettings');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    storeSettings.whatsapp_number = document.getElementById('setWhatsapp').value.replace(/\D/g, '');
+    storeSettings.primary_color = document.getElementById('setPrimaryColor').value;
+
+    try {
+        const { error } = await supabaseClient
+            .from('store_settings')
+            .upsert({
+                id: 1,
+                whatsapp_number: storeSettings.whatsapp_number,
+                primary_color: storeSettings.primary_color,
+                logo_url: storeSettings.logo_url,
+                banners: storeSettings.banners
+            });
+
+        if (error) throw error;
+        showToast('✅ Configurações salvas!');
+    } catch (err) {
+        console.error('Error saving settings:', err);
+        showToast('❌ Erro ao salvar');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Salvar Configurações';
+    }
+});
+
+// Intercept dashboard load to fetch settings
+const originalShowDashboard = window.showDashboard;
+window.showDashboard = function () {
+    originalShowDashboard();
+    loadSettings();
+};
+
