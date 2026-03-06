@@ -277,8 +277,9 @@ function renderTable() {
                 <td><span class="badge-stock">${p.stock} un.</span></td>
                 <td>
                     <div style="display:flex; gap: 8px;">
-                        <button class="btn-danger" style="color:var(--ml-blue)" onclick="editAd('${p.id}')">Editar</button>
-                        <button class="btn-danger" style="color:red" onclick="deleteAd('${p.id}')">Excluir</button>
+                        <button class="btn-sm" style="background:#25d366; color:white; border:none; border-radius:4px; cursor:pointer;" onclick="promptAndSendWhatsApp('${p.id}')">📢 Anunciar</button>
+                        <button class="btn-danger" style="color:var(--ml-blue); border:1px solid #ddd; background:none; padding:4px 8px; border-radius:4px; cursor:pointer;" onclick="editAd('${p.id}')">Editar</button>
+                        <button class="btn-danger" style="color:red; border:1px solid #ddd; background:none; padding:4px 8px; border-radius:4px; cursor:pointer;" onclick="deleteAd('${p.id}')">Excluir</button>
                     </div>
                 </td>
             </tr>
@@ -549,10 +550,52 @@ document.getElementById('formSettings').addEventListener('submit', async (e) => 
     }
 });
 
+// ── WHATSAPP OFFICIAL API SHARING ──────────────────────
+window.promptAndSendWhatsApp = async function (productId) {
+    // Wait, the productId is passed as argument
+    const product = products.find(item => item.id === productId);
+    if (!product) return;
+
+    const phone = prompt("Digite o número do WhatsApp (com DDI e DDD, ex: 5515999999999):", "5515");
+    if (!phone || phone.length < 10) {
+        showToast("⚠️ Número inválido.");
+        return;
+    }
+
+    showToast("⏳ Preparando anúncio...");
+
+    try {
+        const productUrl = `${window.location.origin}/index.html?p=${product.id}`;
+        const productPrice = `R$ ${parseFloat(product.price).toFixed(2).replace('.', ',')}`;
+        const productImage = product.images && product.images.length > 0 ? product.images[0] : (product.image || '');
+
+        const response = await fetch('/api/send-whatsapp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                phone: phone.replace(/\D/g, ''),
+                productName: product.name,
+                productPrice: productPrice,
+                productUrl: productUrl,
+                productImage: productImage
+            })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            showToast("✅ Anúncio enviado com sucesso!");
+        } else {
+            showToast("❌ Erro: " + (result.error || "Falha ao enviar"));
+        }
+    } catch (err) {
+        console.error(err);
+        showToast("❌ Erro de conexão com o servidor.");
+    }
+};
+
 // Intercept dashboard load to fetch settings
 const originalShowDashboard = window.showDashboard;
 window.showDashboard = function () {
     originalShowDashboard();
     loadSettings();
 };
-
