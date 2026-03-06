@@ -215,7 +215,7 @@ function renderProducts(list) {
 
             const baseUrl = window.location.origin;
             const productUrl = `${baseUrl}/?p=${p.id}`;
-            const shareText = `*${p.name}*\n\n*Preço:* ${formatPrice(p.price)}\n*Pagamento:* via PIX\n\nConfira os detalhes no site:\n${productUrl}\n\n_Barracão Reversa - Qualidade e Segurança_`;
+            const shareText = `*${p.name}*\n\n*Preço:* ${formatPrice(p.price)}\n*Pagamento:* via PIX\n\n*COMPRAR:* ${productUrl}\n\n_Barracão Reversa - Qualidade e Segurança_`;
 
             // Tenta usar a Web Share API (compartilha a foto diretamente no WhatsApp)
             if (navigator.share && p.image && !p.image.startsWith('data:')) {
