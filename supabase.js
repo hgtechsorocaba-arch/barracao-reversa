@@ -1,7 +1,7 @@
 // supabase.js
 
 // URL inferred from the dashboard screenshot
-const supabaseUrl = 'https://rdvoqaynmkwlsutsdbks.supabase.co';
+const supabaseUrl = 'https://hwmdwlpmutuhrlcgssqw.supabase.co';
 // Key provided by the user
 const supabaseKey = 'sb_publishable_lo4UybgUFxCbAKVbT-Pkzw_8JEipiqT';
 
