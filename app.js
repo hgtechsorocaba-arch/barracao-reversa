@@ -215,7 +215,7 @@ function renderProducts(list) {
 
             const baseUrl = window.location.origin;
             const productUrl = `${baseUrl}/?p=${p.id}`;
-            const shareText = `*${p.name}*\n\n💰 *${formatPrice(p.price)}*\n🔒 Pagamento total via PIX\n\n📲 Clique em *Comprar* → preencha seus dados → pague via PIX\n⚡ Garanta o seu antes que acabe!\n\n🛒 *COMPRAR:* ${productUrl}\n\n_Compra rápida e segura via PIX_`;
+            const shareText = `*${p.name}*\n\n*Preço:* ${formatPrice(p.price)}\n*Pagamento:* via PIX\n\nConfira os detalhes no site:\n${productUrl}\n\n_Barracão Reversa - Qualidade e Segurança_`;
 
             // Tenta usar a Web Share API (compartilha a foto diretamente no WhatsApp)
             if (navigator.share && p.image && !p.image.startsWith('data:')) {
