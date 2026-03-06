@@ -541,16 +541,24 @@ if (phoneInp) {
 
 // ── INIT ──────────────────────────────────────────────
 async function applyStoreSettings() {
-    if (typeof supabaseClient === 'undefined') return;
+    if (!window.supabaseClient) {
+        console.warn('Supabase client not initialized in app.js');
+        return;
+    }
 
     try {
-        const { data, error } = await supabaseClient
+        const { data, error } = await window.supabaseClient
             .from('store_settings')
             .select('*')
             .eq('id', 1)
             .single();
 
-        if (error || !data) return;
+        if (error || !data) {
+            console.warn('No store settings found or error fetching:', error);
+            return;
+        }
+
+        console.log('Loaded store settings:', data);
 
         // 1. WhatsApp
         if (data.whatsapp_number) {
