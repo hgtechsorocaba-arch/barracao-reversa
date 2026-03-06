@@ -250,79 +250,80 @@
                         </div>
                     </div>
                 </form>
-                <!-- VIEW: CONFIGURAÇÕES -->
-                <div id="view-settings" class="view">
-                    <div class="view-header">
-                        <h1>Configurações da Loja</h1>
+            </div> <!-- Fim VIEW: NOVO ANÚNCIO -->
+
+            <!-- VIEW: CONFIGURAÇÕES -->
+            <div id="view-settings" class="view">
+                <div class="view-header">
+                    <h1>Configurações da Loja</h1>
+                </div>
+
+                <form id="formSettings" class="form-grid">
+                    <div class="col-main">
+                        <!-- Redes e Contato -->
+                        <div class="card">
+                            <h2 class="card-title">Contato e Redes</h2>
+                            <div class="form-group">
+                                <label for="setWhatsapp">WhatsApp da Loja *</label>
+                                <input type="text" id="setWhatsapp" class="form-control" placeholder="Ex: 5515999999999"
+                                    required>
+                                <small class="color-mute">Apenas números, incluindo o código do país (Ex: 55 para
+                                    Brasil).</small>
+                            </div>
+                        </div>
+
+                        <!-- Visual e Identidade -->
+                        <div class="card mt-4">
+                            <h2 class="card-title">Identidade Visual</h2>
+
+                            <div class="form-group mb-3">
+                                <label for="setPrimaryColor">Cor Principal do Layout</label>
+                                <div class="flex-row align-center gap-2" style="display: flex; gap: 10px;">
+                                    <input type="color" id="setPrimaryColor" value="#1e2a3a"
+                                        style="width: 50px; height: 40px; border: none; padding: 0;">
+                                    <span id="colorHexDisplay" class="color-mute">#1e2a3a</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Logo da Loja</label>
+                                <div class="flex-row align-center gap-2"
+                                    style="display: flex; gap: 15px; align-items: center; margin-top: 10px;">
+                                    <img id="logoPreview" src="logo.png"
+                                        style="max-height: 60px; max-width: 150px; object-fit: contain; border: 1px dashed #ccc; padding: 5px; border-radius: 4px;">
+                                    <button type="button" class="btn-secondary btn-sm"
+                                        onclick="document.getElementById('logoInput').click()">Trocar Logo</button>
+                                    <input type="file" id="logoInput" accept="image/png, image/jpeg, image/webp" hidden>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Banners Promo -->
+                        <div class="card mt-4">
+                            <h2 class="card-title">Banners Promocionais (Até 5)</h2>
+                            <p class="color-mute mb-3">Tamanho recomendado: 1200x400px. Eles irão deslizar
+                                automaticamente no topo da página inicial.</p>
+
+                            <div class="banners-grid" id="bannersGrid"
+                                style="display: flex; flex-direction: column; gap: 15px;">
+                                <!-- Banners slots gerados por JS -->
+                            </div>
+
+                            <button type="button" class="btn-secondary btn-sm mt-3" id="btnAddBanner"
+                                onclick="document.getElementById('bannerInput').click()">+ Adicionar Banner</button>
+                            <input type="file" id="bannerInput" accept="image/png, image/jpeg, image/webp" hidden>
+                        </div>
                     </div>
 
-                    <form id="formSettings" class="form-grid">
-                        <div class="col-main">
-                            <!-- Redes e Contato -->
-                            <div class="card">
-                                <h2 class="card-title">Contato e Redes</h2>
-                                <div class="form-group">
-                                    <label for="setWhatsapp">WhatsApp da Loja *</label>
-                                    <input type="text" id="setWhatsapp" class="form-control"
-                                        placeholder="Ex: 5515999999999" required>
-                                    <small class="color-mute">Apenas números, incluindo o código do país (Ex: 55 para
-                                        Brasil).</small>
-                                </div>
-                            </div>
-
-                            <!-- Visual e Identidade -->
-                            <div class="card mt-4">
-                                <h2 class="card-title">Identidade Visual</h2>
-
-                                <div class="form-group mb-3">
-                                    <label for="setPrimaryColor">Cor Principal do Layout</label>
-                                    <div class="flex-row align-center gap-2" style="display: flex; gap: 10px;">
-                                        <input type="color" id="setPrimaryColor" value="#1e2a3a"
-                                            style="width: 50px; height: 40px; border: none; padding: 0;">
-                                        <span id="colorHexDisplay" class="color-mute">#1e2a3a</span>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Logo da Loja</label>
-                                    <div class="flex-row align-center gap-2"
-                                        style="display: flex; gap: 15px; align-items: center; margin-top: 10px;">
-                                        <img id="logoPreview" src="logo.png"
-                                            style="max-height: 60px; max-width: 150px; object-fit: contain; border: 1px dashed #ccc; padding: 5px; border-radius: 4px;">
-                                        <button type="button" class="btn-secondary btn-sm"
-                                            onclick="document.getElementById('logoInput').click()">Trocar Logo</button>
-                                        <input type="file" id="logoInput" accept="image/png, image/jpeg, image/webp"
-                                            hidden>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Banners Promo -->
-                            <div class="card mt-4">
-                                <h2 class="card-title">Banners Promocionais (Até 5)</h2>
-                                <p class="color-mute mb-3">Tamanho recomendado: 1200x400px. Eles irão deslizar
-                                    automaticamente no topo da página inicial.</p>
-
-                                <div class="banners-grid" id="bannersGrid"
-                                    style="display: flex; flex-direction: column; gap: 15px;">
-                                    <!-- Banners slots gerados por JS -->
-                                </div>
-
-                                <button type="button" class="btn-secondary btn-sm mt-3" id="btnAddBanner"
-                                    onclick="document.getElementById('bannerInput').click()">+ Adicionar Banner</button>
-                                <input type="file" id="bannerInput" accept="image/png, image/jpeg, image/webp" hidden>
-                            </div>
+                    <!-- Coluna Direita: Salvar -->
+                    <div class="col-side">
+                        <div class="publish-card">
+                            <button type="submit" class="btn-primary btn-block btn-lg" id="btnSaveSettings">Salvar
+                                Configurações</button>
                         </div>
-
-                        <!-- Coluna Direita: Salvar -->
-                        <div class="col-side">
-                            <div class="publish-card">
-                                <button type="submit" class="btn-primary btn-block btn-lg" id="btnSaveSettings">Salvar
-                                    Configurações</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+                </form>
+            </div>
         </main>
     </div>
 
