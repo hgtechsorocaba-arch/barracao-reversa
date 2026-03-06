@@ -25,7 +25,7 @@ const DEMO_PRODUCTS = [
         category: 'Controladores',
         price: 143.40,
         description: 'Controlador eletrônico de temperatura, bivolt 127/220v. Ideal para refrigeração industrial. Funcionando perfeitamente.',
-        condition: 'Seminovo',
+        condition: 'Revisado e Testado',
         stock: 2,
         urgent: true,
         image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop',
@@ -49,7 +49,7 @@ const DEMO_PRODUCTS = [
         category: 'Fontes',
         price: 89.90,
         description: 'Fonte ATX 500W Real Visão. Sem marcas de queima. Todos os conectores presentes. Seminova.',
-        condition: 'Seminovo',
+        condition: 'Revisado e Testado',
         stock: 1,
         urgent: true,
         image: 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=400&h=300&fit=crop',
@@ -73,7 +73,7 @@ const DEMO_PRODUCTS = [
         category: 'Áudio',
         price: 75.00,
         description: 'Sistema 2.1 com subwoofer ativo. Som potente. Controle de volume e entradas P2 e RCA. Funcionando.',
-        condition: 'Seminovo',
+        condition: 'Revisado e Testado',
         stock: 4,
         urgent: false,
         image: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=400&h=300&fit=crop',
@@ -85,7 +85,7 @@ const DEMO_PRODUCTS = [
         category: 'Informática',
         price: 199.00,
         description: 'HD Externo 1TB USB 3.0. Sem erros, testado com Crystal Disk Info. Acompanha cabo USB.',
-        condition: 'Seminovo',
+        condition: 'Revisado e Testado',
         stock: 0,
         urgent: true,
         image: 'https://images.unsplash.com/photo-1531492746076-161ca9bcad58?w=400&h=300&fit=crop',
@@ -174,8 +174,9 @@ function renderProducts(list) {
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.559 4.14 1.535 5.874L.057 23.547a.75.75 0 0 0 .915.921l5.798-1.52A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.893 0-3.665-.517-5.18-1.418l-.37-.219-3.842 1.008 1.026-3.741-.24-.387A9.953 9.953 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
             ${sold ? 'Esgotado' : 'Comprar'}
           </button>
-          <button class="btn-share" data-id="${p.id}" aria-label="Compartilhar no WhatsApp" title="Enviar para um amigo">
+          <button class="btn-share" data-id="${p.id}" aria-label="Compartilhar no WhatsApp" title="Compartilhe com um amigo" style="display: flex; gap: 6px;">
             <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+            Compartilhe
           </button>
         </div>
       </div>
@@ -197,6 +198,7 @@ function renderProducts(list) {
             e.stopPropagation();
             const id = btn.dataset.id;
             openCheckout(id);
+            showCheckoutForm();
         });
     });
 
@@ -335,7 +337,7 @@ function renderProductDetails(p) {
 
             <div class="details-info-section">
                 <div class="details-header">
-                    <span class="details-condition">${p.condition || 'Seminovo'}</span>
+                    <span class="details-condition">${p.condition || 'Revisado e Testado'}</span>
                     <h1 class="details-title">${p.name}</h1>
                 </div>
 
