@@ -342,8 +342,11 @@ function renderProductDetails(p) {
                 <div class="details-price-card">
                     <div class="exclusive-badge">OFERTA EXCLUSIVA</div>
                     <div class="price-container">
-                        <span class="price-current">R$ ${parseFloat(p.price).toFixed(2).replace('.', ',')}</span>
-                        <span class="price-method">no PIX</span>
+                        <div class="price-old">De ${formatPrice(calcOriginalPrice(p.price))}</div>
+                        <div class="price-row-modal">
+                            <span class="price-current">Por ${formatPrice(p.price)}</span>
+                            <span class="price-method">no PIX</span>
+                        </div>
                     </div>
                 </div>
 
