@@ -835,7 +835,7 @@ a {
   font-size: .85rem;
   color: var(--text-secondary);
 }
-}
+
 
 .divider {
   height: 1px;
@@ -1643,4 +1643,91 @@ select option {
     overflow-x: auto;
     padding-bottom: 5px;
   }
+}
+
+/* ── CHECKOUT FORM FIXES FOR FULL-VIEW (LIGHT THEME) ── */
+.modal-overlay.full-view #checkoutFormView {
+  color: #333;
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.modal-overlay.full-view #checkoutFormView .modal-title {
+  color: #333;
+  margin-top: 20px;
+}
+
+.modal-overlay.full-view #checkoutFormView label {
+  color: #555;
+  font-weight: 700;
+}
+
+.modal-overlay.full-view #checkoutFormView input,
+.modal-overlay.full-view #checkoutFormView select,
+.modal-overlay.full-view #checkoutFormView textarea {
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  color: #333;
+}
+
+.modal-overlay.full-view #checkoutFormView input:focus,
+.modal-overlay.full-view #checkoutFormView select:focus,
+.modal-overlay.full-view #checkoutFormView textarea:focus {
+  border-color: var(--primary-dark);
+}
+
+.modal-overlay.full-view .payment-info-box {
+  background: #f8f9fa;
+  border: 1px solid #e1e4e8;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.modal-overlay.full-view .payment-info-box p {
+  color: #666;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+.modal-overlay.full-view .modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #f0f2f5;
+  border: none;
+  color: #333;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1002;
+  transition: background 0.2s;
+}
+
+.modal-overlay.full-view .modal-close-btn:hover {
+  background: #e4e6e9;
+}
+
+.btn-confirm-order {
+  background: linear-gradient(135deg, var(--whatsapp), var(--whatsapp-dark));
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  width: 100%;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.btn-confirm-order:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
 }

@@ -425,7 +425,7 @@ function showCheckoutForm() {
                 <div>
                     <div style="font-weight:700; font-size:1rem; color:#333;">${currentProduct.name}</div>
                     <div style="font-size:0.85rem; color:#666; margin:4px 0;">${varSummary}</div>
-                    <div style="color:var(--ml-blue); font-weight:800; font-size:1.1rem;">R$ ${parseFloat(currentProduct.price).toFixed(2).replace('.', ',')}</div>
+                    <div style="color:#1e88e5; font-weight:800; font-size:1.1rem;">R$ ${parseFloat(currentProduct.price).toFixed(2).replace('.', ',')}</div>
                 </div>
             </div>
         `;
