@@ -214,31 +214,22 @@ function renderProducts(list) {
             if (!p) return;
 
             const baseUrl = window.location.origin;
-            const productUrl = `${baseUrl}/?p=${p.id}`;
-            const shareText = `🛍️ *${p.name}*\n\n💰 *Preço:* ${formatPrice(p.price)}\n🔓 *Pagamento:* via PIX\n\n🛒 *COMPRAR:* ${productUrl}\n\n_Barracão Reversa - Qualidade e Segurança_`;
+            const productUrl = `${baseUrl}/api/share?id=${p.id}`;
+            const shareText = `*${p.name}*\n\n*Preço:* ${formatPrice(p.price)}\n*Pagamento:* via PIX\n\n*COMPRAR:* ${productUrl}\n\n_Barracão Reversa - Qualidade e Segurança_`;
 
-            // Tenta usar a Web Share API (compartilha a foto diretamente no WhatsApp)
-            if (navigator.share && p.image && !p.image.startsWith('data:')) {
+            if (navigator.share) {
                 try {
-                    const response = await fetch(p.image);
-                    const blob = await response.blob();
-                    const ext = blob.type.includes('png') ? 'png' : 'jpg';
-                    const file = new File([blob], `produto.${ext}`, { type: blob.type });
-
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            files: [file],
-                            title: p.name,
-                            text: shareText,
-                        });
-                        return;
-                    }
+                    await navigator.share({
+                        title: p.name,
+                        text: shareText,
+                    });
+                    return;
                 } catch (err) {
-                    console.warn('Web Share API com arquivo falhou, usando fallback:', err);
+                    console.warn('Web Share API falhou, usando fallback:', err);
                 }
             }
 
-            // Fallback: abre o WhatsApp com texto + link (desktop ou imagem base64)
+            // Fallback: abre o WhatsApp com texto + link
             const wppUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
             window.open(wppUrl, '_blank');
         });

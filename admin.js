@@ -625,7 +625,7 @@ window.promptAndSendWhatsApp = async function (productId) {
     showToast("⏳ Preparando anúncio...");
 
     try {
-        const productUrl = `${window.location.origin}/index.html?p=${product.id}`;
+        const productUrl = `${window.location.origin}/api/share?id=${product.id}`;
         const productPrice = `R$ ${parseFloat(product.price).toFixed(2).replace('.', ',')}`;
         const productImage = product.images && product.images.length > 0 ? product.images[0] : (product.image || '');
 
