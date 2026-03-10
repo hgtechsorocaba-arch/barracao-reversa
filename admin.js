@@ -620,9 +620,20 @@ window.promptAndSendWhatsApp = async function (productId) {
     const product = products.find(item => item.id === productId);
     if (!product) return;
 
-    const phone = prompt("Digite o número do WhatsApp (com DDI e DDD, ex: 5515999999999):", "5515");
-    if (!phone || phone.length < 10) {
-        showToast("⚠️ Número inválido.");
+    let phone = prompt("Digite o número do WhatsApp (ex: 15997886655).\nO código 55 (Brasil) será adicionado automaticamente.", "55");
+
+    if (!phone) return;
+
+    // Limpar apenas números
+    let formattedPhone = phone.replace(/\D/g, '');
+
+    // Se o usuário digitou apenas o DDD + Número (10 ou 11 dígitos), adiciona o 55 automático
+    if (formattedPhone.length === 10 || formattedPhone.length === 11) {
+        formattedPhone = '55' + formattedPhone;
+    }
+
+    if (formattedPhone.length < 12) {
+        showToast("⚠️ Número incompleto. Certifique-se de incluir o DDD.");
         return;
     }
 
@@ -637,7 +648,7 @@ window.promptAndSendWhatsApp = async function (productId) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                phone: phone.replace(/\D/g, ''),
+                phone: formattedPhone,
                 productName: product.name,
                 productPrice: productPrice,
                 productUrl: productUrl,
