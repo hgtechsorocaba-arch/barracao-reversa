@@ -263,10 +263,9 @@ function renderProducts(list) {
             }
         });
     });
-});
 
-// Inicia o auto-play dos carrosséis
-startAutoPlay();
+    // Inicia o auto-play dos carrosséis
+    startAutoPlay();
 }
 
 function startAutoPlay() {
