@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
     const { id } = req.query;
 
     // Base URL for redirect and tags
-    const baseUrl = 'https://barracaoreversa.com';
+    const baseUrl = 'https://www.barracaoreversa.com.br';
 
     if (!id) {
         return res.redirect(302, baseUrl);

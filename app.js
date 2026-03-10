@@ -427,7 +427,7 @@ function renderProductDetails(p) {
                         <div class="trust-badge-icon">📍</div>
                         <div class="trust-badge-text">
                             <strong>Local de Retirada</strong>
-                            <span>Rua Joyce Claudia de Paula 31, Bairro Link</span>
+                            <span>R. Joyce Cláudia de Paula, 216 - Pq. das Laranjeiras</span>
                         </div>
                     </div>
                 </div>
@@ -517,7 +517,7 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
         btn.innerText = 'Processando...';
     }
 
-    const deliveryMsg = `Retirada: No local (Bairro Link)`;
+    const deliveryMsg = `Retirada: R. Joyce Cláudia de Paula, 216 - Pq. das Laranjeiras`;
 
     const varText = Object.entries(selectedVariations).length > 0
         ? ` (${Object.entries(selectedVariations).map(([k, v]) => `${k}: ${v}`).join(', ')})`
