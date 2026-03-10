@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
     const token = process.env.WHATSAPP_TOKEN;
     const phoneId = process.env.WHATSAPP_PHONE_ID;
-    const templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'venda_produto_barracao';
+    const templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'anuncio_venda_oficial';
 
     if (!token || !phoneId) {
         return res.status(500).json({ error: 'WhatsApp API credentials not configured in Vercel environment' });
