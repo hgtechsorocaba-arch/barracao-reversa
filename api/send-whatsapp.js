@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
     const token = process.env.WHATSAPP_TOKEN;
     const phoneId = process.env.WHATSAPP_PHONE_ID;
-    const templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'product_offer_button';
+    const templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'venda_produto_barracao';
 
     if (!token || !phoneId) {
         return res.status(500).json({ error: 'WhatsApp API credentials not configured in Vercel environment' });
@@ -60,7 +60,7 @@ export default async function handler(req, res) {
                             parameters: [
                                 {
                                     type: 'text',
-                                    text: productUrl.split('/').pop() || '' // Use the slug for the dynamic URL button
+                                    text: productUrl.split('id=').pop() || '' // Envia apenas o ID para a URL dinâmica do botão
                                 }
                             ]
                         }
