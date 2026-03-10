@@ -263,16 +263,47 @@ function renderProducts(list) {
             }
         });
     });
+});
 
-    // Helper p/ atualizar bolinhas do carrossel no card
-    window.updateCarouselIndicators = function (el) {
-        const indicators = el.querySelectorAll('.indicator-dot');
-        if (!indicators.length) return;
-        const index = Math.round(el.scrollLeft / el.clientWidth);
-        indicators.forEach((dot, i) => {
-            dot.classList.toggle('active', i === index);
+// Inicia o auto-play dos carrosséis
+startAutoPlay();
+}
+
+function startAutoPlay() {
+    // Limpa intervalos anteriores se existirem para evitar duplicidade
+    if (window.cardCarouselInterval) clearInterval(window.cardCarouselInterval);
+
+    window.cardCarouselInterval = setInterval(() => {
+        document.querySelectorAll('.card-image-wrap').forEach(wrap => {
+            const photos = wrap.querySelectorAll('img');
+            if (photos.length <= 1) return;
+
+            const width = wrap.clientWidth;
+            const currentScroll = wrap.scrollLeft;
+            const maxScroll = Math.floor(width * (photos.length - 1));
+
+            let nextScroll = currentScroll + width;
+            // Se chegou no fim, volta pro começo
+            if (nextScroll > maxScroll + 10) {
+                nextScroll = 0;
+            }
+
+            wrap.scrollTo({
+                left: nextScroll,
+                behavior: 'smooth'
+            });
         });
-    }
+    }, 4500); // Passa a cada 4.5 segundos
+}
+
+// Helper p/ atualizar bolinhas do carrossel no card
+window.updateCarouselIndicators = function (el) {
+    const indicators = el.querySelectorAll('.indicator-dot');
+    if (!indicators.length) return;
+    const index = Math.round(el.scrollLeft / el.clientWidth);
+    indicators.forEach((dot, i) => {
+        dot.classList.toggle('active', i === index);
+    });
 }
 
 // ── FILTER ───────────────────────────────────────────
