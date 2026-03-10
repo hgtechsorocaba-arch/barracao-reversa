@@ -149,10 +149,24 @@ function renderProducts(list) {
     grid.innerHTML = list.map(p => {
         const sl = stockLabel(p.stock ?? 99);
         const sold = (p.stock ?? 99) === 0;
+
+        // Carousel photos
+        const photos = p.images && p.images.length > 0 ? p.images : [p.image];
+        const photosHtml = photos.map(img => `
+            <img src="${img}" alt="${p.name}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><rect width=\'100%\' height=\'100%\' fill=\'%231e2a3a\'/><text y=\'50%\' x=\'50%\' text-anchor=\'middle\' fill=\'%238892a4\' font-size=\'14\' dy=\'.3em\'>📷 Sem foto</text></svg>'">
+        `).join('');
+
+        const indicatorsHtml = photos.length > 1 ? `
+            <div class="carousel-indicators">
+                ${photos.map((_, i) => `<div class="indicator-dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
+            </div>
+        ` : '';
+
         return `
     <div class="product-card${sold ? ' card-sold' : ''}" data-id="${p.id}" tabindex="0" role="button" aria-label="Ver produto ${p.name}">
-      <div class="card-image-wrap">
-        <img src="${p.image}" alt="${p.name}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><rect width=\'100%\' height=\'100%\' fill=\'%231e2a3a\'/><text y=\'50%\' x=\'50%\' text-anchor=\'middle\' fill=\'%238892a4\' font-size=\'14\' dy=\'.3em\'>📷 Sem foto</text></svg>'" />
+      <div class="card-image-wrap" onscroll="updateCarouselIndicators(this)">
+        ${photosHtml}
+        ${indicatorsHtml}
         ${p.urgent && !sold ? '<span class="card-badge-urgent">⚡ Últimas unidades</span>' : ''}
         <span class="card-category">${p.category}</span>
         ${sold ? '<div class="card-sold-overlay">ESGOTADO</div>' : ''}
@@ -249,6 +263,16 @@ function renderProducts(list) {
             }
         });
     });
+
+    // Helper p/ atualizar bolinhas do carrossel no card
+    window.updateCarouselIndicators = function (el) {
+        const indicators = el.querySelectorAll('.indicator-dot');
+        if (!indicators.length) return;
+        const index = Math.round(el.scrollLeft / el.clientWidth);
+        indicators.forEach((dot, i) => {
+            dot.classList.toggle('active', i === index);
+        });
+    }
 }
 
 // ── FILTER ───────────────────────────────────────────
@@ -294,11 +318,21 @@ function renderProductDetails(p) {
 
     // Fotos
     const images = p.images && p.images.length > 0 ? p.images : [p.image];
-    const thumbsHtml = images.map((img, i) => `
-        <div class="thumb-item ${i === 0 ? 'active' : ''}" onclick="changeDetailImage(this, '${img}')">
+    let thumbsHtml = images.map((img, i) => `
+        <div class="thumb-item ${i === 0 ? 'active' : ''}" onclick="changeDetailMedia(this, '${img}', 'image')">
             <img src="${img}">
         </div>
     `).join('');
+
+    // Adiciona o vídeo se houver
+    if (p.video_url) {
+        thumbsHtml += `
+            <div class="thumb-item thumb-video" onclick="changeDetailMedia(this, '${p.video_url}', 'video')">
+                <div class="video-play-mini">▶</div>
+                <video src="${p.video_url}"></video>
+            </div>
+        `;
+    }
 
     // Variações
     let variationsHtml = '';
@@ -325,7 +359,7 @@ function renderProductDetails(p) {
                 <div class="gallery-thumbs">
                     ${thumbsHtml}
                 </div>
-                <div class="details-image-section">
+                <div class="details-image-section" id="mainDetailMediaContainer">
                     <img id="mainDetailImage" src="${images[0]}" class="main-detail-img">
                 </div>
             </div>
@@ -599,6 +633,27 @@ async function applyStoreSettings() {
 
     } catch (err) {
         console.error('Failed to apply store settings:', err);
+    }
+}
+
+window.changeDetailMedia = function (el, url, type) {
+    document.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+
+    const container = document.getElementById('mainDetailMediaContainer');
+    if (!container) return;
+
+    if (type === 'video') {
+        container.innerHTML = `
+            <video class="main-detail-video" controls autoplay muted loop>
+                <source src="${url}" type="video/mp4">
+                Seu navegador não suporta vídeos.
+            </video>
+        `;
+    } else {
+        container.innerHTML = `
+            <img id="mainDetailImage" src="${url}" class="main-detail-img">
+        `;
     }
 }
 

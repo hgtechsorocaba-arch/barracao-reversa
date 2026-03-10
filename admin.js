@@ -91,6 +91,8 @@ function resetForm() {
     imagesBase64 = new Array(10).fill(null);
     renderPhotoSlots();
 
+    document.getElementById('adVideo').value = '';
+
     variations = [];
     renderVariations();
 }
@@ -312,6 +314,7 @@ window.editAd = function (id) {
     document.getElementById('adPrice').value = p.price;
     document.getElementById('adStock').value = p.stock || 1;
     document.getElementById('adUrgent').checked = p.urgent || false;
+    document.getElementById('adVideo').value = p.video_url || '';
 
     // Carregar Fotos
     imagesBase64 = new Array(10).fill(null);
@@ -407,6 +410,7 @@ document.getElementById('formAd').addEventListener('submit', async (e) => {
             price: priceFloat,
             stock: parseInt(document.getElementById('adStock').value, 10),
             urgent: document.getElementById('adUrgent').checked,
+            video_url: document.getElementById('adVideo').value.trim(),
             images: finalImages,
             image: finalImages[0],
             variations: variations.filter(v => v.name.trim() !== ''),
