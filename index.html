@@ -114,6 +114,7 @@
                     <div class="filter-bar">
                         <input class="search-input" id="searchInput" type="text" placeholder="🔍 Buscar produto..." />
                         <select class="category-select" id="categorySelect">
+                            <option value="">Todas as Categorias</option>
                             <option value="Celulares e Smartphones">Celulares e Smartphones</option>
                             <option value="Informática e Acessórios">Informática e Acessórios</option>
                             <option value="Games e Consoles">Games e Consoles</option>
@@ -146,6 +147,8 @@
                     <p>Nenhum produto encontrado.</p>
                     <small>Tente outro filtro ou <a href="https://wa.me/5515999999999" target="_blank">fale
                             conosco</a>.</small>
+                    <br><br>
+                    <button onclick="clearFilters()" class="btn-outline" style="cursor:pointer">Limpar Filtros</button>
                 </div>
         </section>
 

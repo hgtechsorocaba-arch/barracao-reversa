@@ -317,6 +317,12 @@ function applyFilters() {
     renderProducts(filtered);
 }
 
+window.clearFilters = function () {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('categorySelect').value = '';
+    applyFilters();
+}
+
 // ── CHECKOUT MODAL ────────────────────────────────────
 let currentProduct = null;
 let selectedVariations = {};
