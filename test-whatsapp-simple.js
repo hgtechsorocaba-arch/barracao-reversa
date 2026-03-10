@@ -28,7 +28,7 @@ async function runTest() {
                                 {
                                     type: 'image',
                                     image: {
-                                        link: 'https://www.barracaoreversa.com/logo.png' // Imagem de teste
+                                        link: 'https://www.barracaoreversa.com.br/logo.png' // Imagem de teste
                                     }
                                 }
                             ]

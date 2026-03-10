@@ -517,7 +517,7 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
         btn.innerText = 'Processando...';
     }
 
-    const deliveryMsg = `Retirada: R. Joyce Cláudia de Paula, 216 - Pq. das Laranjeiras`;
+    const deliveryMsg = `Retirada: R. Joyce Cláudia de Paula, 216 - Pq. das Laranjeiras (Este é o local para a retirada)`;
 
     const varText = Object.entries(selectedVariations).length > 0
         ? ` (${Object.entries(selectedVariations).map(([k, v]) => `${k}: ${v}`).join(', ')})`
