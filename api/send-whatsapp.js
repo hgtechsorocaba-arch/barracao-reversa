@@ -72,13 +72,14 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('WhatsApp API Error:', data);
-            return res.status(response.status).json({ error: data.error?.message || 'Failed to send message' });
+            console.error('WhatsApp API Error:', JSON.stringify(data, null, 2));
+            console.error('Payload Sent:', JSON.stringify(req.body, null, 2));
+            return res.status(response.status).json({ error: data.error?.message || 'Failed to send message', details: data });
         }
 
         return res.status(200).json({ success: true, data });
     } catch (error) {
         console.error('Server Error:', error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return res.status(500).json({ error: 'Internal Server Error', message: error.message });
     }
 }
