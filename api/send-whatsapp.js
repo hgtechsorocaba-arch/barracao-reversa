@@ -41,7 +41,7 @@ export default async function handler(req, res) {
                                 {
                                     type: 'image',
                                     image: {
-                                        link: productImage
+                                        link: productImage || 'https://www.barracaoreversa.com.br/logo.png'
                                     }
                                 }
                             ]
