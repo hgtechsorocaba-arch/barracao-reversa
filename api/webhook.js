@@ -60,9 +60,9 @@ module.exports = async function handler(req, res) {
             const message = messages[0];
             const senderPhone = message.from;
 
-            // O bot só atende mensagens de texto puro ou resposta interativa
-            let incomingText = '';
-            
+            // Registra a mensagem inteira para debug no console da Vercel
+            console.log("PAYLOAD COMPLETO DA MENSAGEM:", JSON.stringify(message));
+
             if (message.type === 'text') {
                 incomingText = message.text.body;
             } else if (message.type === 'button') {
@@ -72,8 +72,14 @@ module.exports = async function handler(req, res) {
                 if (message.interactive.type === 'button_reply') {
                     incomingText = message.interactive.button_reply.title;
                 }
+            } else if (message.type === 'image' && message.image && message.image.caption) {
+                // Se o usuário encaminhar a foto do produto com o título
+                incomingText = message.image.caption;
+            } else if (message.type === 'video' && message.video && message.video.caption) {
+                incomingText = message.video.caption;
             } else {
-                // Outros tipos de mensagem (imagem, áudio, etc) ignoramos por enquanto
+                // Outros tipos de mensagem (áudio, etc) ignoramos por enquanto, mas logamos
+                console.log(`Tipo de mensagem ignorada: ${message.type}`);
                  return res.status(200).send('EVENT_RECEIVED');
             }
 
