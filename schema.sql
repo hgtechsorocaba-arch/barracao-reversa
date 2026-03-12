@@ -29,6 +29,16 @@ CREATE POLICY "Produtos são públicos" ON public.products
     FOR SELECT USING (true);
 
 -- Política 2: Escrita para todos (Anon) - Mantenha por simplicidade se for testar agora
--- Recomendável em produção limitar isso no futuro
-CREATE POLICY "Escrita para todos" ON public.products
-    FOR ALL USING (true) WITH CHECK (true);
+-- Tabela: whatsapp_groups (NOVO)
+CREATE TABLE IF NOT EXISTS public.whatsapp_groups (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    invite_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Habilitar RLS e Políticas para whatsapp_groups
+ALTER TABLE public.whatsapp_groups ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Grupos são públicos" ON public.whatsapp_groups FOR SELECT USING (true);
+CREATE POLICY "Escrita para todos grupos" ON public.whatsapp_groups FOR ALL USING (true) WITH CHECK (true);
+

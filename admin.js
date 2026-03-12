@@ -614,63 +614,438 @@ document.getElementById('formSettings').addEventListener('submit', async (e) => 
     }
 });
 
-// ── WHATSAPP OFFICIAL API SHARING ──────────────────────
-window.promptAndSendWhatsApp = async function (productId) {
-    // Wait, the productId is passed as argument
-    const product = products.find(item => item.id === productId);
-    if (!product) return;
+// ── GRUPOS MANAGEMENT ──────────────────────────────
+let groups = [];
 
-    let phone = prompt("Digite o número do WhatsApp (ex: 15997886655).\nO código 55 (Brasil) será adicionado automaticamente.", "55");
-
-    if (!phone) return;
-
-    // Limpar apenas números
-    let formattedPhone = phone.replace(/\D/g, '');
-
-    // Se o usuário digitou apenas o DDD + Número (10 ou 11 dígitos), adiciona o 55 automático
-    if (formattedPhone.length === 10 || formattedPhone.length === 11) {
-        formattedPhone = '55' + formattedPhone;
+async function loadGroups() {
+    if (!window.supabaseClient) return;
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('whatsapp_groups')
+            .select('*')
+            .order('name', { ascending: true });
+        if (error) throw error;
+        groups = data || [];
+        renderGroups(groups);
+    } catch (err) {
+        console.error('Erro ao carregar grupos:', err);
     }
+}
 
-    if (formattedPhone.length < 12) {
-        showToast("⚠️ Número incompleto. Certifique-se de incluir o DDD.");
+function renderGroups(list) {
+    const tbody = document.getElementById('groupsTbody');
+    const empty = document.getElementById('emptyGroups');
+    if (!tbody) return;
+
+    if (list.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = list.map(g => `
+        <tr>
+            <td class="td-title">${g.name}</td>
+            <td class="color-mute">${g.invite_url || '—'}</td>
+            <td>
+                <button class="btn-delete-contact" onclick="deleteGroup('${g.id}')" title="Excluir">🗑️</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterGroups() {
+    const q = (document.getElementById('searchGroups')?.value || '').toLowerCase();
+    const filtered = groups.filter(g => g.name.toLowerCase().includes(q));
+    renderGroups(filtered);
+}
+
+function openAddGroupModal() {
+    document.getElementById('groupName').value = '';
+    document.getElementById('groupInvite').value = '';
+    document.getElementById('addGroupModal').style.display = 'flex';
+}
+
+function closeAddGroupModal() {
+    document.getElementById('addGroupModal').style.display = 'none';
+}
+
+async function saveGroup() {
+    const name = document.getElementById('groupName').value.trim();
+    const invite_url = document.getElementById('groupInvite').value.trim();
+
+    if (!name) {
+        showToast('⚠️ O nome do grupo é obrigatório.');
         return;
     }
 
-    showToast("⏳ Preparando anúncio...");
+    try {
+        const { error } = await window.supabaseClient.from('whatsapp_groups').insert([{ name, invite_url }]);
+        if (error) throw error;
+        showToast('✅ Grupo salvo com sucesso!');
+        closeAddGroupModal();
+        await loadGroups();
+    } catch (err) {
+        showToast('❌ Erro ao salvar: ' + err.message);
+    }
+}
+
+async function deleteGroup(id) {
+    if (!confirm('Tem certeza que deseja excluir este grupo?')) return;
+    try {
+        const { error } = await window.supabaseClient.from('whatsapp_groups').delete().eq('id', id);
+        if (error) throw error;
+        showToast('🗑️ Grupo excluído.');
+        await loadGroups();
+    } catch (err) {
+        showToast('❌ Erro ao excluir: ' + err.message);
+    }
+}
+
+// ── CONTACTS MANAGEMENT ──────────────────────────────
+let contacts = [];
+
+async function loadContacts() {
+    if (!window.supabaseClient) return;
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('contacts')
+            .select('*')
+            .order('name', { ascending: true });
+        if (error) throw error;
+        contacts = data || [];
+        renderContacts(contacts);
+    } catch (err) {
+        console.error('Erro ao carregar contatos:', err);
+    }
+}
+
+function renderContacts(list) {
+    const tbody = document.getElementById('contactsTbody');
+    const empty = document.getElementById('emptyContacts');
+    if (!tbody) return;
+
+    if (list.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = list.map(c => `
+        <tr>
+            <td class="td-title">${c.name}</td>
+            <td>${c.phone}</td>
+            <td class="color-mute">${c.notes || '—'}</td>
+            <td>
+                <button class="btn-delete-contact" onclick="deleteContact('${c.id}')" title="Excluir">🗑️</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterContacts() {
+    const q = (document.getElementById('searchContacts')?.value || '').toLowerCase();
+    const filtered = contacts.filter(c =>
+        c.name.toLowerCase().includes(q) || c.phone.includes(q)
+    );
+    renderContacts(filtered);
+}
+
+function openAddContactModal() {
+    document.getElementById('contactName').value = '';
+    document.getElementById('contactPhone').value = '';
+    document.getElementById('contactNotes').value = '';
+    document.getElementById('addContactModal').style.display = 'flex';
+}
+
+function closeAddContactModal() {
+    document.getElementById('addContactModal').style.display = 'none';
+}
+
+// CSV / TXT IMPORT
+async function importCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+
+    // Detect separator: ; or , or tab
+    const sep = lines[0].includes(';') ? ';' : (lines[0].includes('\t') ? '\t' : ',');
+
+    const newContacts = [];
+    let skipped = 0;
+
+    for (const line of lines) {
+        const parts = line.split(sep).map(s => s.trim().replace(/^["']|["']$/g, ''));
+        if (parts.length < 2) { skipped++; continue; }
+
+        const name = parts[0];
+        let phone = parts[1].replace(/\D/g, '');
+
+        // Skip header rows
+        if (!phone || isNaN(phone) || name.toLowerCase() === 'nome') { skipped++; continue; }
+
+        // Auto-add country code
+        if (phone.length === 10 || phone.length === 11) {
+            phone = '55' + phone;
+        }
+
+        const notes = parts[2] || '';
+        newContacts.push({ name, phone, notes });
+    }
+
+    if (newContacts.length === 0) {
+        showToast('⚠️ Nenhum contato válido encontrado. Use o formato: Nome;Telefone');
+        event.target.value = '';
+        return;
+    }
 
     try {
-        const productUrl = `${window.location.origin}/api/share?id=${product.id}`;
-        const productPrice = `R$ ${parseFloat(product.price).toFixed(2).replace('.', ',')}`;
-        const productImage = product.images && product.images.length > 0 ? product.images[0] : (product.image || '');
-
-        const response = await fetch('/api/send-whatsapp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                phone: formattedPhone,
-                productName: product.name,
-                productPrice: productPrice,
-                productUrl: productUrl,
-                productImage: productImage
-            })
-        });
-
-        const result = await response.json();
-        if (response.ok) {
-            showToast("✅ Anúncio enviado com sucesso!");
-        } else {
-            showToast("❌ Erro: " + (result.error || "Falha ao enviar"));
-        }
+        const { error } = await window.supabaseClient.from('contacts').insert(newContacts);
+        if (error) throw error;
+        showToast(`✅ ${newContacts.length} contato(s) importado(s)!` + (skipped ? ` (${skipped} linha(s) ignorada(s))` : ''));
+        await loadContacts();
     } catch (err) {
-        console.error(err);
-        showToast("❌ Erro de conexão com o servidor.");
+        showToast('❌ Erro ao importar: ' + err.message);
     }
+
+    event.target.value = '';
+}
+
+async function saveContact() {
+    const name = document.getElementById('contactName').value.trim();
+    let phone = document.getElementById('contactPhone').value.trim().replace(/\D/g, '');
+    const notes = document.getElementById('contactNotes').value.trim();
+
+    if (!name || !phone) {
+        showToast('⚠️ Nome e telefone são obrigatórios.');
+        return;
+    }
+
+    // Auto-add country code
+    if (phone.length === 10 || phone.length === 11) {
+        phone = '55' + phone;
+    }
+
+    try {
+        const { error } = await window.supabaseClient.from('contacts').insert([{ name, phone, notes }]);
+        if (error) throw error;
+        showToast('✅ Contato salvo com sucesso!');
+        closeAddContactModal();
+        await loadContacts();
+    } catch (err) {
+        showToast('❌ Erro ao salvar: ' + err.message);
+    }
+}
+
+async function deleteContact(id) {
+    if (!confirm('Tem certeza que deseja excluir este contato?')) return;
+    try {
+        const { error } = await window.supabaseClient.from('contacts').delete().eq('id', id);
+        if (error) throw error;
+        showToast('🗑️ Contato excluído.');
+        await loadContacts();
+    } catch (err) {
+        showToast('❌ Erro ao excluir: ' + err.message);
+    }
+}
+
+// ── WHATSAPP SEND MODAL ──────────────────────────────
+let selectedGroups = [];
+
+window.promptAndSendWhatsApp = function (productId) {
+    currentSendProductId = productId;
+    selectedPhones = [];
+    selectedGroups = [];
+
+    const product = products.find(item => item.id === productId);
+    if (!product) return;
+
+    // Set title
+    document.getElementById('whatsappProductName').textContent = product.name;
+
+    // Populate contact and group dropdown
+    const select = document.getElementById('contactSelect');
+    select.innerHTML = '<option value="">-- Escolher contato ou grupo --</option>';
+    
+    // Optgroups for clarity
+    let optHtml = '';
+    
+    if (contacts.length > 0) {
+        optHtml += '<optgroup label="Contatos (Envio Automático)">';
+        contacts.forEach(c => {
+            optHtml += `<option value="tel:${c.phone}">${c.name} (${c.phone})</option>`;
+        });
+        optHtml += '</optgroup>';
+    }
+
+    if (groups.length > 0) {
+        optHtml += '<optgroup label="Grupos (Compartilhamento Link)">';
+        groups.forEach(g => {
+            optHtml += `<option value="group:${g.id}">${g.name}</option>`;
+        });
+        optHtml += '</optgroup>';
+    }
+
+    select.innerHTML += optHtml;
+
+    // Reset
+    document.getElementById('manualPhone').value = '';
+    document.getElementById('selectedContactsList').innerHTML = '';
+    document.getElementById('whatsappModal').style.display = 'flex';
 };
+
+function closeWhatsAppModal() {
+    document.getElementById('whatsappModal').style.display = 'none';
+    currentSendProductId = null;
+    selectedPhones = [];
+    selectedGroups = [];
+}
+
+function onContactSelect() {
+    const select = document.getElementById('contactSelect');
+    const value = select.value; // "tel:..." or "group:..."
+    if (!value) return;
+
+    if (value.startsWith('tel:')) {
+        const phone = value.replace('tel:', '');
+        if (!selectedPhones.includes(phone)) {
+            selectedPhones.push(phone);
+        }
+    } else if (value.startsWith('group:')) {
+        const groupId = value.replace('group:', '');
+        if (!selectedGroups.includes(groupId)) {
+            selectedGroups.push(groupId);
+        }
+    }
+
+    renderSelectedBadges();
+    select.value = '';
+}
+
+function renderSelectedBadges() {
+    const container = document.getElementById('selectedContactsList');
+    if (selectedPhones.length === 0 && selectedGroups.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = '<label style="font-size:.85rem; color:#999; display:block; margin-bottom:6px;">Enviar para:</label>';
+    
+    // Render Contacts
+    html += selectedPhones.map(phone => {
+        const c = contacts.find(x => x.phone === phone);
+        const name = c ? c.name : phone;
+        return `<span class="contact-badge">${name} <span class="remove-badge" onclick="removeSelectedPhone('${phone}')">&times;</span></span>`;
+    }).join('');
+
+    // Render Groups
+    html += selectedGroups.map(gid => {
+        const g = groups.find(x => x.id == gid);
+        const name = g ? g.name : 'Grupo';
+        return `<span class="contact-badge" style="background:#e0f7fa; color:#006064;">👥 ${name} <span class="remove-badge" onclick="removeSelectedGroup('${gid}')">&times;</span></span>`;
+    }).join('');
+
+    container.innerHTML = html;
+}
+
+function removeSelectedPhone(phone) {
+    selectedPhones = selectedPhones.filter(p => p !== phone);
+    renderSelectedBadges();
+}
+
+function removeSelectedGroup(gid) {
+    selectedGroups = selectedGroups.filter(id => id != gid);
+    renderSelectedBadges();
+}
+
+async function sendWhatsAppFromModal() {
+    const manualPhone = document.getElementById('manualPhone').value.trim().replace(/\D/g, '');
+
+    // Collect all phones to send
+    const phonesToSend = [...selectedPhones];
+    if (manualPhone) {
+        let formatted = manualPhone;
+        if (formatted.length === 10 || formatted.length === 11) {
+            formatted = '55' + formatted;
+        }
+        if (!phonesToSend.includes(formatted)) {
+            phonesToSend.push(formatted);
+        }
+    }
+
+    if (phonesToSend.length === 0 && selectedGroups.length === 0) {
+        showToast('⚠️ Selecione um contato, grupo ou digite um número.');
+        return;
+    }
+
+    const product = products.find(item => item.id === currentSendProductId);
+    if (!product) return;
+
+    const btn = document.getElementById('btnSendWhatsApp');
+    btn.disabled = true;
+    btn.textContent = '⏳ Enviando...';
+
+    const productUrl = `${window.location.origin}/api/share?id=${product.id}`;
+    const productPrice = `R$ ${parseFloat(product.price).toFixed(2).replace('.', ',')}`;
+    const productImage = product.images && product.images.length > 0 ? product.images[0] : (product.image || '');
+    
+    // Handle Individual Contacts (Official API)
+    let successCount = 0;
+    let failCount = 0;
+
+    if (phonesToSend.length > 0) {
+        for (const phone of phonesToSend) {
+            try {
+                const response = await fetch('/api/send-whatsapp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone,
+                        productName: product.name,
+                        productPrice,
+                        productUrl,
+                        productImage
+                    })
+                });
+                if (response.ok) successCount++;
+                else failCount++;
+            } catch (err) {
+                failCount++;
+            }
+        }
+    }
+
+    // Handle Groups (Manual Share Link)
+    if (selectedGroups.length > 0) {
+        const shareText = `🔥 *OFERTA IMPERDÍVEL!* 🔥\n\n*${product.name}*\n💰 Por apenas *${productPrice}*\n\n👉 Confira os detalhes e compre aqui:\n${productUrl}`;
+        const encodedText = encodeURIComponent(shareText);
+        
+        // Open the first group in a new tab (or just open the share window)
+        // Since we can't open multiple tabs safely without being blocked, we'll open a general share if multiple or the specific group if one.
+        window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+        successCount += selectedGroups.length;
+    }
+
+    btn.disabled = false;
+    btn.textContent = '📤 Enviar / Compartilhar';
+
+    if (failCount === 0) {
+        showToast(`✅ Operação concluída para ${successCount} alvo(s)!`);
+        closeWhatsAppModal();
+    } else {
+        showToast(`⚠️ ${successCount} enviado(s), ${failCount} falha(s).`);
+    }
+}
 
 // Intercept dashboard load to fetch settings
 const originalShowDashboard = window.showDashboard;
 window.showDashboard = function () {
     originalShowDashboard();
     loadSettings();
+    loadContacts();
+    loadGroups();
 };

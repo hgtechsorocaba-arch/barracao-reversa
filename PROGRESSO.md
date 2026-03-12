@@ -77,9 +77,11 @@ const CONFIG = {
 
 ```
 C:\Projetos\barracao-reversa\
-├── index.html   → Página principal
-├── style.css    → Estilos (cores, layout, responsividade)
-├── app.js       → Toda a lógica (produtos, estoque, checkout, admin, WhatsApp)
+├── admin.html   → Painel Administrativo (Novo)
+├── admin.js     → Lógica do Painel (CRUD, Contatos, Grupos, API WhatsApp)
+├── admin.css    → Estilos do Painel
+├── schema.sql   → Script para o banco de dados Supabase
+├── app.js       → Lógica da loja (vitrine, checkout)
 └── PROGRESSO.md → Este arquivo
 ```
 
