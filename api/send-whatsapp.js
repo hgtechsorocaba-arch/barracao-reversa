@@ -64,6 +64,17 @@ export default async function handler(req, res) {
                                     text: productUrl.split('id=').pop() || '' // Envia apenas o ID para a URL dinâmica do botão
                                 }
                             ]
+                        },
+                        {
+                            type: 'button',
+                            sub_type: 'quick_reply',
+                            index: '1',
+                            parameters: [
+                                {
+                                    type: 'payload',
+                                    payload: productUrl.split('id=').pop() || '' // Oculta o ID neste botão para o bot ler depois
+                                }
+                            ]
                         }
                     ]
                 }
