@@ -87,20 +87,29 @@ module.exports = async function handler(req, res) {
             const contextMatches = message.context && message.context.id;
             
             // LÓGICA DO ROBÔ:
-            // Vamos assumir que se a pessoa mandou um texto que "parece" um nome de produto,
-            // ou se ela respondeu a uma mensagem que citava o produto, vamos procurar no banco.
-
+            // 1. Se a mensagem veio do botão "Conversar com a empresa", o ID do produto 
+            //    pode vir no texto do botão se configuramos assim ou o cliente pode ter mandado texto
             console.log(`Mensagem recebida de ${senderPhone}: "${incomingText}"`);
 
+            // Captura o ID do botão se a pessoa clicou em "Conversar com a empresa".
+            // No send-whatsapp.js, o payload do botão era apenas o próprio ID do produto: productUrl.split('id=').pop()
+            let productIdFromButton = null;
+            if (message.type === 'button') {
+                 productIdFromButton = message.button.text;
+            } else if (message.type === 'interactive' && message.interactive.type === 'button_reply') {
+                 productIdFromButton = message.interactive.button_reply.id || message.interactive.button_reply.title;
+            }
+
             // Faz a verificação no Supabase
-            const product = await searchProductInSupabase(incomingText);
+            // Passa tanto o texto quanto o possível ID do botão
+            const product = await searchProductInSupabase(incomingText, productIdFromButton);
 
             if (product) {
                 // Encontrou! Responder com o link
                 console.log(`Produto encontrado: ${product.name}. Enviando resposta.`);
                 await sendReplyMessage(senderPhone, product);
             } else {
-                console.log(`Nenhum produto encontrado correspondente a: "${incomingText}"`);
+                console.log(`Nenhum produto encontrado correspondente a: "${incomingText}" ou ID "${productIdFromButton}"`);
             }
 
             return res.status(200).send('EVENT_RECEIVED');
@@ -122,22 +131,22 @@ module.exports = async function handler(req, res) {
 // ---------------------------------------------------------
 
 /**
- * Busca o produto no Supabase usando uma busca textual simples.
+ * Busca o produto no Supabase usando uma busca textual simples ou ID
  */
-async function searchProductInSupabase(searchText) {
-    if (!searchText || searchText.length < 3) return null;
+async function searchProductInSupabase(searchText, productId = null) {
+    if ((!searchText || searchText.length < 3) && !productId) return null;
 
-    // Limpa um pouco o texto recebido para melhorar a busca
-    // Se a mensagem diz "Echo Dot (Geração mais recente)", uma busca exata falharia facilmente.
-    // Vamos usar a API REST do Supabase com o operador ilike (busca case-insensitive baseada em padrão).
-    // Nota: Ilike no REST API Supabase usa formato: col=ilike.*termo*
-    
-    // Pegar o começo do texto (ex: primeiras 3 palavras) para fazer a busca mais flexível
-    const palavras = searchText.trim().split(' ').slice(0, 3).join(' ');
-    // Escapar caracteres especiais para a URL
-    const termoBusca = encodeURIComponent(`*${palavras}*`);
+    let url = '';
 
-    const url = `${supabaseUrl}/rest/v1/products?select=id,name,price,stock,image&name=ilike.${termoBusca}&limit=1`;
+    if (productId && productId.length > 5) { // IDs no Supabase costumam ser longos (UUID ou Hash curtos)
+         // Busca exata pelo ID
+         url = `${supabaseUrl}/rest/v1/products?select=id,name,price,stock,image&id=eq.${encodeURIComponent(productId)}&limit=1`;
+    } else {
+         // Busca textual por nome
+         const palavras = searchText.trim().split(' ').slice(0, 3).join(' ');
+         const termoBusca = encodeURIComponent(`*${palavras}*`);
+         url = `${supabaseUrl}/rest/v1/products?select=id,name,price,stock,image&name=ilike.${termoBusca}&limit=1`;
+    }
 
     return new Promise((resolve, reject) => {
         const options = {
