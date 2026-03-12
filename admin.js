@@ -853,8 +853,9 @@ async function deleteContact(id) {
     }
 }
 
-// ── WHATSAPP SEND MODAL ──────────────────────────────
 let selectedGroups = [];
+let selectedPhones = [];
+let currentSendProductId = null;
 
 window.promptAndSendWhatsApp = function (productId) {
     currentSendProductId = productId;
