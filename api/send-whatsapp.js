@@ -41,7 +41,8 @@ export default async function handler(req, res) {
                                 {
                                     type: 'image',
                                     image: {
-                                        link: productImage
+                                        // A Meta NÃO suporta WebP em templates. O proxy wsrv.nl força a conversão para JPG.
+                                        link: `https://wsrv.nl/?url=${encodeURIComponent(productImage)}&output=jpg`
                                     }
                                 }
                             ]
