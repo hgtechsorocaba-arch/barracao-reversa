@@ -8,8 +8,10 @@ const supabaseKey = 'sb_publishable_lo4UybgUFxCbAKVbT-Pkzw_8JEipiqT';
 module.exports = async function handler(req, res) {
     const { id } = req.query;
 
-    // Base URL for redirect and tags
-    const baseUrl = 'https://www.barracaoreversa.com.br';
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers.host || 'www.barracaoreversa.com.br';
+    // Dynamic baseUrl to avoid WhatsApp OG URL mismatch
+    const baseUrl = `${protocol}://${host}`;
 
     if (!id) {
         return res.redirect(302, baseUrl);
@@ -62,6 +64,8 @@ module.exports = async function handler(req, res) {
             <meta name="description" content="${descTexto}" />
             
             <!-- Open Graph / WhatsApp / Facebook -->
+            <link rel="canonical" href="${baseUrl}/api/share?id=${id}" />
+            <meta property="og:site_name" content="Barracão Reversa" />
             <meta property="og:type" content="website" />
             <meta property="og:title" content="${product.name}" />
             <meta property="og:description" content="${descTexto}" />
@@ -70,6 +74,10 @@ module.exports = async function handler(req, res) {
             <meta property="og:image:width" content="1200" />
             <meta property="og:image:height" content="630" />
             <meta property="og:url" content="${baseUrl}/api/share?id=${id}" />
+            
+            <meta itemprop="name" content="${product.name}">
+            <meta itemprop="description" content="${descTexto}">
+            <meta itemprop="image" content="${product.image || 'https://www.barracaoreversa.com.br/logo.png'}">
             
             <!-- Twitter -->
             <meta name="twitter:card" content="summary_large_image">
