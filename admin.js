@@ -859,16 +859,26 @@ async function deleteAllContacts() {
         const btn = document.querySelector('button[onclick="deleteAllContacts()"]');
         if(btn) btn.textContent = "⏳ Apagando...";
         
-        const { error } = await window.supabaseClient.from('contacts').delete().neq('id', 'zero'); // Hack para deletar tudo que não for zero (deleta todos)
-        if (error) throw error;
+        // Pega todos os IDs válidos em memória para apagar com segurança
+        const idsToDelete = contacts.map(c => c.id);
+        
+        // Divide em lotes caso tenha muitos contatos
+        const chunkSize = 100;
+        for (let i = 0; i < idsToDelete.length; i += chunkSize) {
+            const chunk = idsToDelete.slice(i, i + chunkSize);
+            const { error } = await window.supabaseClient.from('contacts').delete().in('id', chunk);
+            if (error) throw error;
+        }
         
         showToast('🗑️ Todos os contatos foram limpos!');
         await loadContacts();
         
         if(btn) btn.innerHTML = "🗑️ Apagar Todos";
     } catch (err) {
-        console.error(err);
-        showToast('❌ Erro ao apagar contatos.');
+        console.error('Erro detalhado:', err);
+        showToast('❌ Erro ao apagar contatos. Veja o console.');
+        const btn = document.querySelector('button[onclick="deleteAllContacts()"]');
+        if(btn) btn.innerHTML = "🗑️ Apagar Todos";
     }
 }
 
