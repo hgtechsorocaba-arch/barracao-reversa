@@ -769,7 +769,9 @@ async function importCSV(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    const text = await file.text();
+    const rawText = await file.text();
+    // Sanitize to remove null bytes (common in UTF-16LE from Excel) and backslashes (causes Postgres unicode escape errors)
+    const text = rawText.replace(/\0/g, '').replace(/\\/g, '');
     const lines = text.split(/\r?\n/).filter(l => l.trim());
 
     // Detect separator: ; or , or tab
