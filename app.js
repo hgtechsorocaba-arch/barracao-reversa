@@ -229,7 +229,7 @@ function renderProducts(list) {
 
             const baseUrl = window.location.origin;
             const productUrl = `${baseUrl}/api/share?id=${p.id}`;
-            const shareText = `*${p.name}*\n\n*Preço:* ${formatPrice(p.price)}\n*Pagamento:* via PIX\n\n*COMPRAR:* ${productUrl}\n\n_Barracão Reversa - Qualidade e Segurança_`;
+            const shareText = `*${p.name}*\n\n*Preço:* ${formatPrice(p.price)}\n*Pagamento:* via PIX\n\n_Barracão Reversa - Qualidade e Segurança_\n\n*COMPRAR:*\n${productUrl}`;
 
             if (navigator.share) {
                 try {

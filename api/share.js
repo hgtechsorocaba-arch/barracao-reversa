@@ -65,8 +65,11 @@ module.exports = async function handler(req, res) {
             <meta property="og:type" content="website" />
             <meta property="og:title" content="${product.name}" />
             <meta property="og:description" content="${descTexto}" />
-            <meta property="og:image" content="${product.image || 'https://barracao-reversa.vercel.app/logo.png'}" />
-            <meta property="og:url" content="${baseUrl}/?p=${id}" />
+            <meta property="og:image" content="${product.image || 'https://www.barracaoreversa.com.br/logo.png'}" />
+            <meta property="og:image:type" content="image/jpeg" />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+            <meta property="og:url" content="${baseUrl}/api/share?id=${id}" />
             
             <!-- Twitter -->
             <meta name="twitter:card" content="summary_large_image">
