@@ -776,22 +776,42 @@ async function importCSV(event) {
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        // Converte planilha em Matriz de Arrays [["Nome", "Telefone"], ["João", "119..."]]
-        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+        // Puxa como objetos: [{ "Nome Cliente": "Pedro", "Celular": "119999" }]
+        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
         
         const newContacts = [];
         let skipped = 0;
 
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
-            if (!row || row.length < 2) { skipped++; continue; }
+            
+            // Auto-detect columns based on keys
+            let nameVal = '';
+            let phoneVal = '';
+            let noteVal = '';
 
-            // Limpa as strings removendo nulos caso tenham vindo bugados no buffer original
-            const name = (row[0] || '').toString().trim().replace(/\0/g, '');
-            let phone = (row[1] || '').toString().trim().replace(/\D/g, '');
-            const notes = row[2] ? row[2].toString().trim().replace(/\0/g, '') : '';
+            const keys = Object.keys(row);
+            
+            // Tenta encontrar colunas inteligentemente
+            const nameKey = keys.find(k => k.toLowerCase().includes('nome') || k.toLowerCase().includes('name') || k.toLowerCase() === 'contato' || k.toLowerCase() === 'cliente');
+            const phoneKey = keys.find(k => k.toLowerCase().includes('tel') || k.toLowerCase().includes('cel') || k.toLowerCase().includes('fone') || k.toLowerCase().includes('number') || k.toLowerCase().includes('whatsapp'));
+            const noteKey = keys.find(k => k.toLowerCase().includes('obs') || k.toLowerCase().includes('nota') || k.toLowerCase().includes('desc'));
 
-            // Ignora cabeçalhos ou dados nulos
+            // Se não encontrou cabeçalho, assume posição (fallback)
+            if (nameKey) nameVal = row[nameKey];
+            else if (keys.length > 0) nameVal = row[keys[0]];
+
+            if (phoneKey) phoneVal = row[phoneKey];
+            else if (keys.length > 1) phoneVal = row[keys[1]];
+
+            if (noteKey) noteVal = row[noteKey];
+            else if (keys.length > 2) noteVal = row[keys[2]];
+
+            let name = (nameVal || '').toString().trim().replace(/\0/g, '');
+            let phone = (phoneVal || '').toString().trim().replace(/\D/g, '');
+            const notes = (noteVal || '').toString().trim().replace(/\0/g, '');
+
+            // Ignora se não tem telefone ou nome
             if (!phone || isNaN(phone) || name.toLowerCase() === 'nome') { skipped++; continue; }
 
             // Adiciona código do pais
@@ -803,21 +823,53 @@ async function importCSV(event) {
         }
 
         if (newContacts.length === 0) {
-            showToast('⚠️ Nenhum contato válido. Use: Coluna 1 = Nome, Coluna 2 = Telefone');
+            showToast('⚠️ Nenhuma coluna de Telefone encontrada. Verifique se a planilha possui cabeçalhos como "Nome" e "Telefone".');
             event.target.value = '';
             return;
         }
 
         const { error } = await window.supabaseClient.from('contacts').insert(newContacts);
         if (error) throw error;
-        showToast(`✅ ${newContacts.length} contato(s) importado(s)!` + (skipped ? ` (${skipped} ignorada(s))` : ''));
+        showToast(`✅ ${newContacts.length} contato(s) importado(s)!` + (skipped ? ` (${skipped} linha(s) ignorada(s))` : ''));
         await loadContacts();
     } catch (err) {
         console.error('Erro na leitura da planilha:', err);
-        showToast('❌ Erro no arquivo. Se o erro persistir, salve a planilha como CSV (.csv) e tente de novo.');
+        showToast('❌ Erro no arquivo. Tente salvar a planilha como CSV (.csv) e importar novamente.');
     }
 
     event.target.value = '';
+}
+
+async function deleteAllContacts() {
+    if (contacts.length === 0) {
+        showToast('A lista já está vazia.');
+        return;
+    }
+    
+    if (!confirm('Você tem ABSOLUTA CERTEZA que quer apagar TODOS os contatos salvos? Essa ação não pode ser desfeita.')) return;
+    
+    // Segunda confirmação de segurança
+    const confirmText = prompt('Digite "APAGAR" para confirmar a exclusão de todos os contatos:');
+    if (confirmText !== 'APAGAR') {
+        showToast('Exclusão cancelada.');
+        return;
+    }
+
+    try {
+        const btn = document.querySelector('button[onclick="deleteAllContacts()"]');
+        if(btn) btn.textContent = "⏳ Apagando...";
+        
+        const { error } = await window.supabaseClient.from('contacts').delete().neq('id', 'zero'); // Hack para deletar tudo que não for zero (deleta todos)
+        if (error) throw error;
+        
+        showToast('🗑️ Todos os contatos foram limpos!');
+        await loadContacts();
+        
+        if(btn) btn.innerHTML = "🗑️ Apagar Todos";
+    } catch (err) {
+        console.error(err);
+        showToast('❌ Erro ao apagar contatos.');
+    }
 }
 
 async function saveContact() {
