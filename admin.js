@@ -785,34 +785,28 @@ async function importCSV(event) {
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
             
-            // Auto-detect columns based on keys
-            let nameVal = '';
-            let phoneVal = '';
-            let noteVal = '';
-
-            const keys = Object.keys(row);
+            // Pega todos os valores da linha como array de strings limpos
+            let cellValues = Object.values(row).map(v => (v || '').toString().trim().replace(/\0/g, ''));
             
-            // Tenta encontrar colunas inteligentemente
-            const nameKey = keys.find(k => k.toLowerCase().includes('nome') || k.toLowerCase().includes('name') || k.toLowerCase() === 'contato' || k.toLowerCase() === 'cliente');
-            const phoneKey = keys.find(k => k.toLowerCase().includes('tel') || k.toLowerCase().includes('cel') || k.toLowerCase().includes('fone') || k.toLowerCase().includes('number') || k.toLowerCase().includes('whatsapp'));
-            const noteKey = keys.find(k => k.toLowerCase().includes('obs') || k.toLowerCase().includes('nota') || k.toLowerCase().includes('desc'));
+            // 1. Procura o Telefone: qualquer célula que tenha entre 8 e 15 números
+            let phoneVal = cellValues.find(v => {
+                let digits = v.replace(/\D/g, '');
+                return digits.length >= 8 && digits.length <= 15;
+            });
 
-            // Se não encontrou cabeçalho, assume posição (fallback)
-            if (nameKey) nameVal = row[nameKey];
-            else if (keys.length > 0) nameVal = row[keys[0]];
+            // 2. Procura o Nome: primeira célula com texto não-vazio que não seja o próprio telefone
+            let nameVal = cellValues.find(v => v !== phoneVal && v.length > 1 && isNaN(v));
 
-            if (phoneKey) phoneVal = row[phoneKey];
-            else if (keys.length > 1) phoneVal = row[keys[1]];
+            // 3. Procura Observação: qualquer texto restante
+            let noteVal = cellValues.find(v => v !== phoneVal && v !== nameVal && v.length > 0);
 
-            if (noteKey) noteVal = row[noteKey];
-            else if (keys.length > 2) noteVal = row[keys[2]];
+            let name = nameVal || 'Contato ' + (i + 1);
+            let phone = (phoneVal || '').replace(/\D/g, '');
+            const notes = noteVal || '';
 
-            let name = (nameVal || '').toString().trim().replace(/\0/g, '');
-            let phone = (phoneVal || '').toString().trim().replace(/\D/g, '');
-            const notes = (noteVal || '').toString().trim().replace(/\0/g, '');
-
-            // Ignora se não tem telefone ou nome
-            if (!phone || isNaN(phone) || name.toLowerCase() === 'nome') { skipped++; continue; }
+            // Ignora se não achou telefone
+            if (!phone) { skipped++; continue; }
+            if (name.toLowerCase() === 'nome' || name.toLowerCase() === 'cliente') { skipped++; continue; } // Ignora cabeçalhos que se passarem por nomes
 
             // Adiciona código do pais
             if (phone.length === 10 || phone.length === 11) {
@@ -823,7 +817,7 @@ async function importCSV(event) {
         }
 
         if (newContacts.length === 0) {
-            showToast('⚠️ Nenhuma coluna de Telefone encontrada. Verifique se a planilha possui cabeçalhos como "Nome" e "Telefone".');
+            showToast('⚠️ Não encontramos nenhum número de telefone válido na sua planilha!');
             event.target.value = '';
             return;
         }
