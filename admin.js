@@ -998,11 +998,15 @@ function renderSelectedBadges() {
     let html = '<label style="font-size:.85rem; color:#999; display:block; margin-bottom:6px;">Enviar para:</label>';
     
     // Render Contacts
-    html += selectedPhones.map(phone => {
-        const c = contacts.find(x => x.phone === phone);
-        const name = c ? c.name : phone;
-        return `<span class="contact-badge">${name} <span class="remove-badge" onclick="removeSelectedPhone('${phone}')">&times;</span></span>`;
-    }).join('');
+    if (selectedPhones.length > 20) {
+        html += `<span class="contact-badge" style="background:#fff3cd; color:#856404; font-weight:600;">📱 ${selectedPhones.length} Contatos Selecionados <span class="remove-badge" onclick="removeAllSelectedPhones()">&times;</span></span>`;
+    } else {
+        html += selectedPhones.map(phone => {
+            const c = contacts.find(x => x.phone === phone);
+            const name = c ? c.name : phone;
+            return `<span class="contact-badge">${name} <span class="remove-badge" onclick="removeSelectedPhone('${phone}')">&times;</span></span>`;
+        }).join('');
+    }
 
     // Render Groups
     html += selectedGroups.map(gid => {
@@ -1013,6 +1017,26 @@ function renderSelectedBadges() {
 
     container.innerHTML = html;
 }
+
+window.selectAllContactsForBlast = function() {
+    if (contacts.length === 0) {
+        showToast('Nenhum contato na agenda.');
+        return;
+    }
+    
+    contacts.forEach(c => {
+        if (!selectedPhones.includes(c.phone)) {
+            selectedPhones.push(c.phone);
+        }
+    });
+    
+    renderSelectedBadges();
+};
+
+window.removeAllSelectedPhones = function() {
+    selectedPhones = [];
+    renderSelectedBadges();
+};
 
 function removeSelectedPhone(phone) {
     selectedPhones = selectedPhones.filter(p => p !== phone);

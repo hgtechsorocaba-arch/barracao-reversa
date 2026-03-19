@@ -436,7 +436,10 @@
                 <p class="color-mute" style="margin-bottom:20px;" id="whatsappProductName"></p>
 
                 <div class="form-group">
-                    <label>Selecione um contato salvo</label>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                        <label style="margin:0;">Selecione contatos ou grupos</label>
+                        <button type="button" class="btn-secondary btn-sm" onclick="selectAllContactsForBlast()">Selecionar Todos</button>
+                    </div>
                     <select id="contactSelect" class="form-control" onchange="onContactSelect()">
                         <option value="">-- Escolher contato --</option>
                     </select>
