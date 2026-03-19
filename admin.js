@@ -764,54 +764,57 @@ function closeAddContactModal() {
     document.getElementById('addContactModal').style.display = 'none';
 }
 
-// CSV / TXT IMPORT
+// EXCEL / CSV / TXT IMPORT
 async function importCSV(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    const rawText = await file.text();
-    // Sanitize to remove null bytes (common in UTF-16LE from Excel) and backslashes (causes Postgres unicode escape errors)
-    const text = rawText.replace(/\0/g, '').replace(/\\/g, '');
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    try {
+        showToast('⏳ Processando planilha...');
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Converte planilha em Matriz de Arrays [["Nome", "Telefone"], ["João", "119..."]]
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+        
+        const newContacts = [];
+        let skipped = 0;
 
-    // Detect separator: ; or , or tab
-    const sep = lines[0].includes(';') ? ';' : (lines[0].includes('\t') ? '\t' : ',');
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length < 2) { skipped++; continue; }
 
-    const newContacts = [];
-    let skipped = 0;
+            // Limpa as strings removendo nulos caso tenham vindo bugados no buffer original
+            const name = (row[0] || '').toString().trim().replace(/\0/g, '');
+            let phone = (row[1] || '').toString().trim().replace(/\D/g, '');
+            const notes = row[2] ? row[2].toString().trim().replace(/\0/g, '') : '';
 
-    for (const line of lines) {
-        const parts = line.split(sep).map(s => s.trim().replace(/^["']|["']$/g, ''));
-        if (parts.length < 2) { skipped++; continue; }
+            // Ignora cabeçalhos ou dados nulos
+            if (!phone || isNaN(phone) || name.toLowerCase() === 'nome') { skipped++; continue; }
 
-        const name = parts[0];
-        let phone = parts[1].replace(/\D/g, '');
+            // Adiciona código do pais
+            if (phone.length === 10 || phone.length === 11) {
+                phone = '55' + phone;
+            }
 
-        // Skip header rows
-        if (!phone || isNaN(phone) || name.toLowerCase() === 'nome') { skipped++; continue; }
-
-        // Auto-add country code
-        if (phone.length === 10 || phone.length === 11) {
-            phone = '55' + phone;
+            newContacts.push({ name, phone, notes });
         }
 
-        const notes = parts[2] || '';
-        newContacts.push({ name, phone, notes });
-    }
+        if (newContacts.length === 0) {
+            showToast('⚠️ Nenhum contato válido. Use: Coluna 1 = Nome, Coluna 2 = Telefone');
+            event.target.value = '';
+            return;
+        }
 
-    if (newContacts.length === 0) {
-        showToast('⚠️ Nenhum contato válido encontrado. Use o formato: Nome;Telefone');
-        event.target.value = '';
-        return;
-    }
-
-    try {
         const { error } = await window.supabaseClient.from('contacts').insert(newContacts);
         if (error) throw error;
-        showToast(`✅ ${newContacts.length} contato(s) importado(s)!` + (skipped ? ` (${skipped} linha(s) ignorada(s))` : ''));
+        showToast(`✅ ${newContacts.length} contato(s) importado(s)!` + (skipped ? ` (${skipped} ignorada(s))` : ''));
         await loadContacts();
     } catch (err) {
-        showToast('❌ Erro ao importar: ' + err.message);
+        console.error('Erro na leitura da planilha:', err);
+        showToast('❌ Erro no arquivo. Se o erro persistir, salve a planilha como CSV (.csv) e tente de novo.');
     }
 
     event.target.value = '';
