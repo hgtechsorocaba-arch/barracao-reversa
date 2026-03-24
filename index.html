@@ -1,243 +1,129 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Barracão Reversa – Eletrônicos Usados e Revisados</title>
-    <meta name="description"
-        content="Produtos eletrônicos usados e revisados com os melhores preços. Controladores, placas, roteadores, fontes e muito mais. Compre agora via PIX pelo WhatsApp!" />
-
-    <!-- Open Graph / WhatsApp / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Barracão Reversa | Eletrônicos com Garantia" />
-    <meta property="og:description"
-        content="Eletrônicos revisados, inspecionados e com garantia real. Compre com segurança e receba em casa." />
-    <meta property="og:image" content="https://www.barracaoreversa.com.br/logo.png" />
-
-    <!-- Fonts & CSS -->
+    <title>Manutenção - Barracão Reversa</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
-        rel="stylesheet" />
-    <link rel="stylesheet" href="style.css" />
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --primary: #f97316; /* Laranja Barracão Reversa */
+            --bg-dark: #0f172a;
+            --text-light: #f8fafc;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        .bg-glow {
+            position: absolute;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(249,115,22,0.12) 0%, rgba(15,23,42,0) 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 600px;
+            padding: 50px 30px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 1s ease-out;
+        }
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 24px;
+            animation: float 6s ease-in-out infinite;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p {
+            font-size: 1.125rem;
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 35px;
+        }
+        .whatsapp-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background-color: #25D366;
+            color: #fff;
+            padding: 16px 32px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px -5px rgba(37, 211, 102, 0.4);
+        }
+        .whatsapp-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px -5px rgba(37, 211, 102, 0.5);
+            background-color: #20bd5a;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .dots { display: inline-flex; }
+        .dot { animation: jump 1.5s infinite; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes jump {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-4px); }
+        }
+    </style>
 </head>
-
 <body>
-
-    <!-- HEADER -->
-    <header class="header">
-        <div class="header-inner">
-            <div class="logo">
-                <img src="logo.png" alt="Logo Barracão Reversa" class="logo-img-header">
-                <div>
-                    <span class="logo-title">Barracão Reversa</span>
-                    <span class="logo-sub">Saldão E Outlet</span>
-                </div>
-            </div>
-            <nav class="header-nav">
-                <a href="#produtos" class="nav-link">Produtos</a>
-                <a href="#como-comprar" class="nav-link">Como Comprar</a>
-                <a id="whatsapp-header"
-                    href="https://wa.me/5515999999999?text=Olá! Quero consultar produtos disponíveis no Barracão Reversa."
-                    target="_blank" class="btn-whatsapp-header">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                        <path
-                            d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                        <path
-                            d="M12 0C5.373 0 0 5.373 0 12c0 2.136.559 4.14 1.535 5.874L.057 23.547a.75.75 0 0 0 .915.921l5.798-1.52A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.893 0-3.665-.517-5.18-1.418l-.37-.219-3.842 1.008 1.026-3.741-.24-.387A9.953 9.953 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
-                    </svg>
-                    WhatsApp
-                </a>
-            </nav>
-            <a href="admin.html" class="admin-btn" title="Painel do Vendedor">⚙️</a>
-        </div>
-    </header>
-
-    <!-- HERO -->
-    <section class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">♻️ Economia Inteligente</div>
-            <h1 class="hero-title">Eletrônicos <span class="highlight">Revisados</span><br />com Garantia Real</h1>
-            <p class="hero-sub">Controladores, placas, fontes, roteadores e muito mais.<br />Pagamento via PIX · Envio
-                rápido · Entrega ou retirada</p>
-            <div class="hero-actions">
-                <a href="#produtos" class="btn-primary">Ver Produtos</a>
-                <a href="https://wa.me/5515999999999?text=Olá! Quero consultar produtos do Barracão Reversa."
-                    target="_blank" class="btn-outline">📲 Falar no WhatsApp</a>
-            </div>
-            <div class="hero-stats">
-                <div class="stat"><strong>500+</strong><span>Produtos disponíveis</span></div>
-                <div class="stat"><strong>R$ 20</strong><span>A partir de</span></div>
-                <div class="stat"><strong>🔥</strong><span>Novidades toda semana</span></div>
-            </div>
-        </div>
-        <div class="hero-wave"></div>
-    </section>
-
-    <!-- COMO COMPRAR -->
-    <section id="como-comprar" class="how-section">
-        <h2 class="section-title">Como Comprar</h2>
-        <div class="steps">
-            <div class="step">
-                <div class="step-num">1</div>
-                <div class="step-icon">🛍️</div>
-                <h3>Escolha o Produto</h3>
-                <p>Navegue pelos produtos disponíveis e clique em <strong>Comprar</strong></p>
-            </div>
-            <div class="step-arrow">→</div>
-            <div class="step">
-                <div class="step-num">2</div>
-                <div class="step-icon">📝</div>
-                <h3>Preencha seus Dados</h3>
-                <p>Nome, telefone e endereço para entrega ou confirmação de retirada</p>
-            </div>
-            <div class="step-arrow">→</div>
-            <div class="step">
-                <div class="step-num">3</div>
-                <div class="step-icon">📱</div>
-                <h3>Finalize pelo WhatsApp</h3>
-                <p>Seu pedido vai direto para nosso WhatsApp. Pague via <strong>PIX</strong> e pronto!</p>
-            </div>
-        </div>
-        <!-- BANNERS SLIDER -->
-        <div id="bannerSlider" class="banner-slider" style="display: none;"></div>
-
-        <!-- PRODUTOS -->
-        <section id="produtos" class="products-section">
-            <main class="catalog-container container">
-                <div class="products-header">
-                    <h2 class="section-title">Produtos Disponíveis</h2>
-                    <div class="filter-bar">
-                        <input class="search-input" id="searchInput" type="text" placeholder="🔍 Buscar produto..." />
-                        <select class="category-select" id="categorySelect">
-                            <option value="">Todas as Categorias</option>
-                            <option value="Celulares e Smartphones">Celulares e Smartphones</option>
-                            <option value="Informática e Acessórios">Informática e Acessórios</option>
-                            <option value="Games e Consoles">Games e Consoles</option>
-                            <option value="Placas mãe e Vídeo">Placas mãe e Vídeo</option>
-                            <option value="Processadores">Processadores</option>
-                            <option value="Memórias">Memórias</option>
-                            <option value="Armazenamento (HD/SSD)">Armazenamento (HD/SSD)</option>
-                            <option value="Fontes de energia">Fontes de energia</option>
-                            <option value="Periféricos e Acessórios">Periféricos e Acessórios</option>
-                            <option value="Controladores / Industrial">Controladores / Industrial</option>
-                            <option value="Roteadores / Rede">Roteadores / Rede</option>
-                            <option value="Eletrônicos, Áudio e Vídeo">Eletrônicos, Áudio e Vídeo</option>
-                            <option value="TV e Vídeo">TV e Vídeo</option>
-                            <option value="Câmeras e Foto">Câmeras e Foto</option>
-                            <option value="Eletrodomésticos">Eletrodomésticos</option>
-                            <option value="Ferramentas">Ferramentas</option>
-                            <option value="Esportes e Fitness">Esportes e Fitness</option>
-                            <option value="Brinquedos e Hobbies">Brinquedos e Hobbies</option>
-                            <option value="Beleza e Cuidado Pessoal">Beleza e Cuidado Pessoal</option>
-                            <option value="Acessórios para Veículos">Acessórios para Veículos</option>
-                            <option value="Outros">Outros</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="products-grid" id="productsGrid">
-                    <!-- Cards injetados por JS -->
-                </div>
-                <div class="empty-state" id="emptyState" style="display:none;">
-                    <div class="empty-icon">📦</div>
-                    <p>Nenhum produto encontrado.</p>
-                    <small>Tente outro filtro ou <a href="https://wa.me/5515999999999" target="_blank">fale
-                            conosco</a>.</small>
-                    <br><br>
-                    <button onclick="clearFilters()" class="btn-outline" style="cursor:pointer">Limpar Filtros</button>
-                </div>
-        </section>
-
-        <!-- CHECKOUT MODAL -->
-        <div class="modal-overlay" id="checkoutModal">
-            <!-- View 1: Detalhes do Produto (HG Tech / ML Style) -->
-            <div id="productDetailsView">
-                <!-- Renderizado dinamicamente via app.js -->
-            </div>
-
-            <!-- View 2: Formulário de Checkout -->
-            <div id="checkoutFormView" style="display: none;">
-                <button class="modal-close-btn" onclick="closeCheckout()">✕</button>
-
-                <div id="checkoutSummary">
-                    <!-- Miniatura do produto e variações escolhidas -->
-                </div>
-
-                <h2 class="modal-title">Finalizar Pedido</h2>
-                <form id="checkoutForm">
-                    <div class="form-group">
-                        <label for="userName">Seu Nome Completo *</label>
-                        <input type="text" id="userName" placeholder="Ex: João Silva" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="userEmail">Seu E-mail *</label>
-                        <input type="email" id="userEmail" placeholder="seu@email.com" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="userPhone">WhatsApp com DDD *</label>
-                        <input type="tel" id="userPhone" placeholder="(15) 99999-9999" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>COMO DESEJA RECEBER? *</label>
-                        <input type="text"
-                            value="R. Joyce Cláudia de Paula, 216 - Pq. das Laranjeiras (Este é o local para a retirada)"
-                            readonly
-                            style="background: #f0f0f0; color: #555; cursor: not-allowed; border-color: #ddd; font-size: 0.85rem;">
-                    </div>
-
-                    <div class="payment-info-box">
-                        <div class="pix-label">💰 Pagamento Seguro</div>
-                        <p>O pagamento será processado de forma segura pelo Mercado Pago.</p>
-                    </div>
-
-                    <button type="submit" class="btn-confirm-order" id="btnConfirmOrder">
-                        Finalizar Compra
-                    </button>
-                </form>
-            </div>
-        </div>
-
-
-
-        <!-- TOAST -->
-        <div class="toast" id="toast"></div>
-
-        <!-- FOOTER -->
-        <footer class="footer">
-            <div class="footer-inner">
-                <div class="footer-logo">
-                    <img src="logo.png" alt="Logo" class="logo-img-footer">
-                    <span>Barracão Reversa</span>
-                </div>
-                <p>Saldão E Outlet com qualidade e preço justo.</p>
-                <a href="https://wa.me/5515996966956" target="_blank" class="footer-whatsapp">
-                    📲 (15) 99696-6956
-                </a>
-                <p class="footer-copy">© 2025 Barracão Reversa · Todos os direitos reservados</p>
-                <div
-                    style="margin-top: 10px; display: flex; justify-content: center; gap: 15px; font-size: 0.75rem; opacity: 0.8;">
-                    <a href="privacidade.html" style="text-decoration: underline; color: inherit;">Política de
-                        Privacidade</a>
-                    <span style="opacity: 0.3;">|</span>
-                    <a href="termos.html" style="text-decoration: underline; color: inherit;">Termos de Uso</a>
-                </div>
-                <p class="footer-copy" style="margin-top: 15px; opacity: 0.9;">
-                    Desenvolvido por <a
-                        href="https://wa.me/5515988136215?text=Ol%C3%A1%20Frank%2C%20vi%20seu%20cr%C3%A9dito%20no%20site%20do%20Barrac%C3%A3o%20Reversa%20e%20gostaria%20de%20um%20or%C3%A7amento%20para%20um%20site%20ou%20landing%20page."
-                        target="_blank" style="text-decoration: underline; color: var(--primary);">Frank Santiago</a>.
-                    Está precisando de uma landingpage ou site? Clique e peça seu orçamento.
-                </p>
-            </div>
-        </footer>
-
-        <script src="app.js"></script>
+    <div class="bg-glow"></div>
+    <div class="container">
+        <img src="logo.png" alt="Barracão Reversa" class="logo">
+        <h1>Estamos em Manutenção<span class="dots"><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span></h1>
+        <p>Estamos atualizando nossos sistemas para oferecer uma experiência ainda melhor para você. Voltaremos em breve!</p>
+        <a href="https://wa.me/5515996966956?text=Opa! Vi que o site de vocês está em manutenção, gostaria de saber mais informações sobre produtos :)" class="whatsapp-btn" target="_blank">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                <path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.559 4.14 1.535 5.874L.057 23.547a.75.75 0 0 0 .915.921l5.798-1.52A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.893 0-3.665-.517-5.18-1.418l-.37-.219-3.842 1.008 1.026-3.741-.24-.387A9.953 9.953 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+            </svg>
+            Fale conosco no WhatsApp
+        </a>
+    </div>
 </body>
-
 </html>
