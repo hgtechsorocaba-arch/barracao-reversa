@@ -1,0 +1,142 @@
+const https = require('https');
+
+module.exports = async function handler(req, res) {
+    // CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') return res.status(200).end();
+
+    if (req.method !== 'POST') {
+        res.setHeader('Allow', ['POST']);
+        return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
+    const { paymentId, externalRef } = req.body;
+    if (!paymentId) {
+        return res.status(400).json({ error: 'Missing paymentId' });
+    }
+
+    const mpToken = process.env.MP_ACCESS_TOKEN;
+    const zapLinkSecret = process.env.ZAPLINK_EXTERNAL_SECRET || 'hgtech_bot_secret_123';
+    const notifyPhone = process.env.NOTIFY_PHONE || '5515996966956'; // Número do Everton
+
+    if (!mpToken) {
+        return res.status(500).json({ error: 'MP_ACCESS_TOKEN not configured' });
+    }
+
+    try {
+        // 1. Consultar status do pagamento no Mercado Pago
+        console.log(`Verificando pagamento ${paymentId} no Mercado Pago...`);
+        const payment = await getMercadoPagoPayment(paymentId, mpToken);
+
+        if (!payment || payment.status !== 'approved') {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Payment not approved or not found', 
+                status: payment ? payment.status : 'unknown' 
+            });
+        }
+
+        // 2. Extrair informações do pagamento
+        const item = payment.additional_info?.items?.[0] || {};
+        const title = item.title || 'Produto';
+        const price = payment.transaction_amount || 0;
+        const payer = payment.payer || {};
+        const name = (payer.first_name || '') + ' ' + (payer.last_name || '');
+        const phone = payment.metadata?.telefone || 'Não informado';
+
+        // 3. Montar a mensagem de notificação para o Everton
+        const message = `🔔 *NOVA COMPRA APROVADA!* 🔔\n\n` +
+            `*Produto:* ${title}\n` +
+            `*Valor:* R$ ${parseFloat(price).toFixed(2).replace('.', ',')}\n` +
+            `*Cliente:* ${name.trim()}\n` +
+            `*Telefone:* ${phone}\n` +
+            `*E-mail:* ${payer.email || 'Não informado'}\n` +
+            `*ID do Pagamento:* ${paymentId}\n` +
+            `*Referência:* ${externalRef || 'Nenhuma'}\n\n` +
+            `Aprovado automaticamente via Mercado Pago!`;
+
+        // 4. Enviar mensagem via ZapLink
+        console.log(`Enviando mensagem via ZapLink para o número ${notifyPhone}...`);
+        const zapLinkResponse = await sendZapLinkMessage(notifyPhone, message, zapLinkSecret);
+
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Payment verified and notification sent', 
+            zapLinkResponse 
+        });
+
+    } catch (err) {
+        console.error('Error confirming payment:', err);
+        return res.status(500).json({ error: 'Error processing payment confirmation', details: err.message });
+    }
+};
+
+// Consultar o pagamento no Mercado Pago
+function getMercadoPagoPayment(paymentId, accessToken) {
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: 'api.mercadopago.com',
+            port: 443,
+            path: `/v1/payments/${paymentId}`,
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+            },
+        };
+
+        const request = https.request(options, (response) => {
+            let data = '';
+            response.on('data', (chunk) => data += chunk);
+            response.on('end', () => {
+                try {
+                    resolve(JSON.parse(data));
+                } catch {
+                    resolve(null);
+                }
+            });
+        });
+
+        request.on('error', reject);
+        request.end();
+    });
+}
+
+// Disparar mensagem via API ZapLink
+function sendZapLinkMessage(phone, message, secret) {
+    return new Promise((resolve, reject) => {
+        const payload = JSON.stringify({
+            secret: secret,
+            message: message,
+            groupId: phone // O endpoint 'send-message' do ZapLink recebe o número no parâmetro 'groupId'
+        });
+
+        const options = {
+            hostname: 'zaplink.app.br',
+            port: 443,
+            path: '/api/external/send-message',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload),
+            },
+        };
+
+        const request = https.request(options, (response) => {
+            let data = '';
+            response.on('data', (chunk) => data += chunk);
+            response.on('end', () => {
+                try {
+                    resolve(JSON.parse(data));
+                } catch {
+                    resolve({ raw: data });
+                }
+            });
+        });
+
+        request.on('error', reject);
+        request.write(payload);
+        request.end();
+    });
+}

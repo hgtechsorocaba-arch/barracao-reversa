@@ -758,6 +758,20 @@ async function init() {
         const paymentId = urlParams.get('payment_id') || '';
         const externalRef = urlParams.get('external_reference') || '';
         
+        // Dispara a notificação automática para o servidor em segundo plano
+        if (paymentId) {
+            fetch('/api/confirm-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ paymentId, externalRef })
+            })
+            .then(res => res.json())
+            .then(data => console.log('Confirmação automática do pagamento processada:', data))
+            .catch(err => console.error('Erro ao enviar confirmação automática:', err));
+        }
+
         setTimeout(() => {
             showPaymentConfirmationModal(paymentId, externalRef);
             // Limpa parâmetros da URL para evitar reexibição do modal no refresh
