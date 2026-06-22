@@ -44,12 +44,29 @@ module.exports = async function handler(req, res) {
         const payment = await getMercadoPagoPayment(paymentId, mpToken);
 
         if (!payment || payment.status !== 'approved') {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Payment not approved or not found', 
+            console.log(`Pagamento ${paymentId} não está aprovado (status: ${payment ? payment.status : 'unknown'}). Retornando 200.`);
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Payment not approved, ignoring event', 
                 status: payment ? payment.status : 'unknown' 
             });
         }
+
+        const supabaseUrl = 'https://hwmdwlpmutuhrlcgssqw.supabase.co';
+        const supabaseKey = 'sb_publishable_lo4UybgUFxCbAKVbT-Pkzw_8JEipiqT';
+
+        // Evitar duplicidade (Deduplicação)
+        const alreadyProcessed = await isPaymentAlreadyProcessed(paymentId, supabaseUrl, supabaseKey);
+        if (alreadyProcessed) {
+            console.log(`Pagamento ${paymentId} já foi processado e notificado anteriormente. Ignorando.`);
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Payment already processed and notified' 
+            });
+        }
+
+        // Marcar como processado antes de enviar para evitar condições de corrida (race conditions)
+        await markPaymentAsProcessed(paymentId, supabaseUrl, supabaseKey);
 
         // 2. Extrair informações do pagamento
         const item = payment.additional_info?.items?.[0] || {};
@@ -170,5 +187,80 @@ function sendZapLinkMessage(phone, message, secret, instancePhone) {
         request.on('error', reject);
         request.write(payload);
         request.end();
+    });
+}
+
+// Verificar se o pagamento já foi processado no Supabase
+function isPaymentAlreadyProcessed(paymentId, supabaseUrl, supabaseKey) {
+    return new Promise((resolve) => {
+        const urlObj = new URL(`${supabaseUrl}/rest/v1/processed_payments?payment_id=eq.${encodeURIComponent(paymentId)}&select=payment_id`);
+        const options = {
+            hostname: urlObj.hostname,
+            path: urlObj.pathname + urlObj.search,
+            method: 'GET',
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json'
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const result = JSON.parse(data);
+                    if (Array.isArray(result) && result.length > 0) {
+                        resolve(true); // Já processado
+                    } else {
+                        resolve(false);
+                    }
+                } catch {
+                    resolve(false);
+                }
+            });
+        });
+
+        req.on('error', (err) => {
+            console.error('Error checking processed payment:', err);
+            resolve(false);
+        });
+        req.end();
+    });
+}
+
+// Salvar no Supabase que o pagamento foi processado
+function markPaymentAsProcessed(paymentId, supabaseUrl, supabaseKey) {
+    return new Promise((resolve) => {
+        const payload = JSON.stringify({ payment_id: String(paymentId) });
+        const urlObj = new URL(`${supabaseUrl}/rest/v1/processed_payments`);
+        
+        const options = {
+            hostname: urlObj.hostname,
+            path: urlObj.pathname,
+            method: 'POST',
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload)
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            res.on('data', () => {});
+            res.on('end', () => {
+                resolve(res.statusCode === 201);
+            });
+        });
+
+        req.on('error', (err) => {
+            console.error('Error marking payment as processed:', err);
+            resolve(false);
+        });
+
+        req.write(payload);
+        req.end();
     });
 }
