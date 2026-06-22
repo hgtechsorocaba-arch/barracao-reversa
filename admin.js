@@ -983,7 +983,7 @@ window.promptAndSendWhatsApp = function (productId) {
     let optHtml = '';
     
     if (contacts.length > 0) {
-        optHtml += '<optgroup label="Contatos (Envio Automático)">';
+        optHtml += '<optgroup label="Contatos (WhatsApp Web/App)">';
         contacts.forEach(c => {
             optHtml += `<option value="tel:${c.phone}">${c.name} (${c.phone})</option>`;
         });
@@ -1003,6 +1003,13 @@ window.promptAndSendWhatsApp = function (productId) {
     // Reset
     document.getElementById('manualPhone').value = '';
     document.getElementById('selectedContactsList').innerHTML = '';
+    
+    // Reset buttons visibility
+    const sendBtn = document.getElementById('btnSendWhatsApp');
+    if (sendBtn) sendBtn.style.display = 'block';
+    const helloBtn = document.getElementById('btnSendHelloWorld');
+    if (helloBtn) helloBtn.style.display = 'block';
+
     document.getElementById('whatsappModal').style.display = 'flex';
 };
 
@@ -1117,82 +1124,91 @@ async function sendWhatsAppFromModal() {
     const product = products.find(item => item.id === currentSendProductId);
     if (!product) return;
 
-    const btn = document.getElementById('btnSendWhatsApp');
-    btn.disabled = true;
-    btn.textContent = '⏳ Enviando...';
-
     const productUrl = `${window.location.origin}/api/share?id=${product.id}`;
-    
-    // Formata o preço apenas com o número, pois o "R$" já está no template do Meta
-    const productPrice = parseFloat(product.price).toFixed(2).replace('.', ',');
-    const productImage = product.images && product.images.length > 0 ? product.images[0] : (product.image || '');
-    
-    // Handle Individual Contacts (Official API)
-    let successCount = 0;
-    let failCount = 0;
+    const productPriceStr = 'R$ ' + parseFloat(product.price).toFixed(2).replace('.', ',');
+    const shareText = `🔥 *OFERTA IMPERDÍVEL!* 🔥\n\n*${product.name}*\n💰 Por apenas *${productPriceStr}*\n\n👉 Confira os detalhes e compre aqui:\n${productUrl}`;
+    const encodedText = encodeURIComponent(shareText);
 
-    if (phonesToSend.length > 0) {
-        let currentIdx = 0;
-        for (const phone of phonesToSend) {
-            currentIdx++;
-            btn.textContent = `⏳ Enviando ${currentIdx}/${phonesToSend.length}...`;
-            
-            try {
-                const response = await fetch('/api/send-whatsapp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        phone,
-                        productName: product.name,
-                        productPrice,
-                        productUrl,
-                        productImage
-                    })
-                });
-                const resultData = await response.json();
-                console.log(`[META DEBUG] Envio para ${phone}:`, resultData);
-                if (resultData.metaResponse && resultData.metaResponse.contacts) {
-                    console.log(`[META DEBUG] WA_ID Identificado pela Meta:`, resultData.metaResponse.contacts[0].wa_id);
-                }
-
-                if (response.ok) {
-                    successCount++;
-                    // Agendar uma checagem de status em 10 segundos
-                    if (resultData.metaResponse && resultData.metaResponse.messages) {
-                        const msgId = resultData.metaResponse.messages[0].id;
-                        setTimeout(() => checkMessageStatus(msgId, phone), 10000);
-                    }
-                } else {
-                    failCount++;
-                    console.error(`Erro no envio para ${phone}:`, resultData);
-                }
-            } catch (err) {
-                failCount++;
-            }
+    // Se for exatamente 1 alvo (contato ou grupo), abre direto e fecha o modal
+    if (phonesToSend.length + selectedGroups.length === 1) {
+        if (phonesToSend.length === 1) {
+            const phone = phonesToSend[0];
+            window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodedText}`, '_blank');
+        } else {
+            // Grupo
+            window.open(`https://wa.me/?text=${encodedText}`, '_blank');
         }
-    }
-
-    // Handle Groups (Manual Share Link)
-    if (selectedGroups.length > 0) {
-        const shareText = `🔥 *OFERTA IMPERDÍVEL!* 🔥\n\n*${product.name}*\n💰 Por apenas *${productPrice}*\n\n👉 Confira os detalhes e compre aqui:\n${productUrl}`;
-        const encodedText = encodeURIComponent(shareText);
-        
-        // Open the first group in a new tab (or just open the share window)
-        // Since we can't open multiple tabs safely without being blocked, we'll open a general share if multiple or the specific group if one.
-        window.open(`https://wa.me/?text=${encodedText}`, '_blank');
-        successCount += selectedGroups.length;
-    }
-
-    btn.disabled = false;
-    btn.textContent = '📤 Enviar / Compartilhar';
-
-    if (failCount === 0) {
-        showToast(`✅ Operação concluída para ${successCount} alvo(s)!`);
+        showToast('✅ Abrindo WhatsApp...');
         closeWhatsAppModal();
-    } else {
-        showToast(`⚠️ ${successCount} enviado(s), ${failCount} falha(s).`);
+        return;
     }
+
+    // Se forem múltiplos alvos, exibimos uma lista de botões no próprio modal para evitar bloqueio de popups
+    const container = document.getElementById('selectedContactsList');
+    let html = `
+        <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-top: 15px; border: 1px solid #333;">
+            <label style="font-size: .85rem; font-weight: bold; color: var(--primary); display: block; margin-bottom: 8px;">
+                📲 Envio Manual (Clique em cada um para enviar):
+            </label>
+            <div style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; padding-right: 4px;">
+    `;
+
+    // Botões para contatos
+    phonesToSend.forEach((phone) => {
+        const c = contacts.find(x => x.phone === phone);
+        const name = c ? c.name : phone;
+        html += `
+            <button type="button" class="btn-manual-send" onclick="triggerManualSendPhone(this, '${phone}', '${encodedText}')" 
+                    style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 8px 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; text-align: left; font-size: 0.85rem; transition: all 0.2s;">
+                <span>👤 ${name}</span>
+                <span class="send-status-icon" style="color: #25d366; font-weight: bold;">Enviar ➔</span>
+            </button>
+        `;
+    });
+
+    // Botões para grupos
+    selectedGroups.forEach((gid) => {
+        const g = groups.find(x => x.id == gid);
+        const name = g ? g.name : 'Grupo';
+        html += `
+            <button type="button" class="btn-manual-send" onclick="triggerManualSendGroup(this, '${encodedText}')"
+                    style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 8px 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; text-align: left; font-size: 0.85rem; transition: all 0.2s;">
+                <span>👥 ${name}</span>
+                <span class="send-status-icon" style="color: #00bcd4; font-weight: bold;">Compartilhar ➔</span>
+            </button>
+        `;
+    });
+
+    html += `
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = html;
+    showToast('💡 Clique nos botões acima para enviar para cada contato.');
+    
+    // Oculta os botões principais de envio oficial/hello world para limpar a tela
+    document.getElementById('btnSendWhatsApp').style.display = 'none';
+    const helloBtn = document.getElementById('btnSendHelloWorld');
+    if (helloBtn) helloBtn.style.display = 'none';
 }
+
+// Funções globais executadas quando o usuário clica nos botões de disparo manual
+window.triggerManualSendPhone = function(btn, phone, encodedText) {
+    window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodedText}`, '_blank');
+    btn.style.background = '#1a3322';
+    btn.style.borderColor = '#25d366';
+    btn.querySelector('.send-status-icon').textContent = '✅ Aberto';
+    btn.querySelector('.send-status-icon').style.color = '#888';
+};
+
+window.triggerManualSendGroup = function(btn, encodedText) {
+    window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+    btn.style.background = '#112d32';
+    btn.style.borderColor = '#00bcd4';
+    btn.querySelector('.send-status-icon').textContent = '✅ Aberto';
+    btn.querySelector('.send-status-icon').style.color = '#888';
+};
 
 window.sendHelloWorldTest = async function() {
     const manualPhone = document.getElementById('manualPhone').value.trim().replace(/\D/g, '');
