@@ -68,7 +68,14 @@ module.exports = async function handler(req, res) {
         }
         name = name.trim() || 'Não informado';
 
-        const phone = metadata.telefone || 'Não informado';
+        let phone = metadata.telefone || '';
+        if (!phone.trim()) {
+            const pPhone = payment.additional_info?.payer?.phone || payment.payer?.phone || {};
+            if (pPhone.number) {
+                phone = (pPhone.area_code ? `(${pPhone.area_code}) ` : '') + pPhone.number;
+            }
+        }
+        phone = phone.trim() || 'Não informado';
 
         // 3. Montar a mensagem de notificação para o Everton
         const message = `🔔 *NOVA COMPRA APROVADA!* 🔔\n\n` +
