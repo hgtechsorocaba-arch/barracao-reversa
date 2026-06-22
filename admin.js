@@ -1259,4 +1259,30 @@ window.showDashboard = function () {
     loadSettings();
     loadContacts();
     loadGroups();
+    initMobileSidebar();
 };
+
+function initMobileSidebar() {
+    const menuToggleBtn = document.getElementById('menuToggleBtn');
+    const sidebar = document.querySelector('.sidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+
+    if (menuToggleBtn && sidebar && backdrop) {
+        menuToggleBtn.onclick = function() {
+            sidebar.classList.toggle('active');
+            backdrop.classList.toggle('active');
+        };
+
+        backdrop.onclick = function() {
+            sidebar.classList.remove('active');
+            backdrop.classList.remove('active');
+        };
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                sidebar.classList.remove('active');
+                backdrop.classList.remove('active');
+            });
+        });
+    }
+}
