@@ -75,6 +75,16 @@ module.exports = async function handler(req, res) {
         const metadata = payment.metadata || {};
         const payer = payment.payer || {};
         const additionalPayer = payment.additional_info?.payer || {};
+
+        // Dar baixa no estoque do produto no Supabase
+        const productId = metadata.produto_id || item.id;
+        if (productId && productId !== 'avulso' && productId !== 'produto') {
+            try {
+                await decrementProductStock(productId, supabaseUrl, supabaseKey);
+            } catch (err) {
+                console.error(`Error decrementing stock for product ${productId}:`, err);
+            }
+        }
         
         let name = metadata.cliente_nome || '';
         if (!name.trim()) {
@@ -257,6 +267,86 @@ function markPaymentAsProcessed(paymentId, supabaseUrl, supabaseKey) {
 
         req.on('error', (err) => {
             console.error('Error marking payment as processed:', err);
+            resolve(false);
+        });
+
+        req.write(payload);
+        req.end();
+    });
+}
+
+// Dar baixa no estoque (decrementar por 1) no Supabase
+async function decrementProductStock(productId, supabaseUrl, supabaseKey) {
+    if (!productId || productId === 'avulso' || productId === 'produto') return;
+
+    // 1. Buscar o estoque atual
+    const product = await new Promise((resolve) => {
+        const url = `${supabaseUrl}/rest/v1/products?id=eq.${encodeURIComponent(productId)}&select=stock`;
+        const options = {
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json'
+            }
+        };
+
+        https.get(url, options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const result = JSON.parse(data);
+                    if (Array.isArray(result) && result.length > 0) {
+                        resolve(result[0]);
+                    } else {
+                        resolve(null);
+                    }
+                } catch {
+                    resolve(null);
+                }
+            });
+        }).on('error', (err) => {
+            console.error('Error fetching product stock:', err);
+            resolve(null);
+        });
+    });
+
+    if (!product || typeof product.stock === 'undefined') {
+        console.log(`Produto ${productId} não encontrado ou campo de estoque indefinido.`);
+        return;
+    }
+
+    const currentStock = parseInt(product.stock) || 0;
+    const newStock = Math.max(0, currentStock - 1);
+    console.log(`Atualizando estoque do produto ${productId}: ${currentStock} -> ${newStock}`);
+
+    // 2. Fazer PATCH para atualizar o estoque
+    await new Promise((resolve) => {
+        const payload = JSON.stringify({ stock: newStock });
+        const urlObj = new URL(`${supabaseUrl}/rest/v1/products?id=eq.${encodeURIComponent(productId)}`);
+        
+        const options = {
+            hostname: urlObj.hostname,
+            path: urlObj.pathname + urlObj.search,
+            method: 'PATCH',
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload)
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            res.on('data', () => {});
+            res.on('end', () => {
+                console.log(`Status da atualização de estoque no Supabase: ${res.statusCode}`);
+                resolve(res.statusCode === 204 || res.statusCode === 200);
+            });
+        });
+
+        req.on('error', (err) => {
+            console.error('Error sending stock update request:', err);
             resolve(false);
         });
 
