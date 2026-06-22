@@ -51,6 +51,12 @@ module.exports = async function handler(req, res) {
             const changes = entry?.changes?.[0];
             const value = changes?.value;
             const messages = value?.messages;
+            const statuses = value?.statuses;
+
+            // Se for um aviso de status da entrega (ex: delivered, read, failed)
+            if (statuses && statuses.length > 0) {
+                console.log("META DELIVERY STATUS UPDATE:", JSON.stringify(statuses, null, 2));
+            }
 
             // Se não houver mensagem, retorna 200 para a Meta não reenviar
             if (!messages || messages.length === 0) {

@@ -53,6 +53,24 @@ module.exports = async function handler(req, res) {
             ? `${product.description} - Por apenas ${precoFormatado} no PIX!`
             : `Produto incrível no Barracão Reversa. Por apenas ${precoFormatado}`;
 
+        // Função para escapar caracteres HTML especiais para atributos de meta tags
+        const escapeHtml = (str) => {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        };
+
+        // Sanitizar descrição removendo quebras de linha que quebram tags meta
+        const cleanDescTexto = descTexto.replace(/\r?\n|\r/g, ' ');
+
+        const escapedName = escapeHtml(product.name);
+        const escapedDesc = escapeHtml(cleanDescTexto);
+        const escapedImage = escapeHtml(product.image || `${baseUrl}/logo.png`);
+
         // Render simple HTML with OG tags and a JS redirect
         const html = `
         <!DOCTYPE html>
@@ -60,30 +78,30 @@ module.exports = async function handler(req, res) {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${product.name} | Barracão Reversa</title>
-            <meta name="description" content="${descTexto}" />
+            <title>${escapedName} | Barracão Reversa</title>
+            <meta name="description" content="${escapedDesc}" />
             
             <!-- Open Graph / WhatsApp / Facebook -->
             <link rel="canonical" href="${baseUrl}/api/share?id=${id}" />
             <meta property="og:site_name" content="Barracão Reversa" />
             <meta property="og:type" content="website" />
-            <meta property="og:title" content="${product.name}" />
-            <meta property="og:description" content="${descTexto}" />
-            <meta property="og:image" content="${product.image || 'https://www.barracaoreversa.com.br/logo.png'}" />
+            <meta property="og:title" content="${escapedName}" />
+            <meta property="og:description" content="${escapedDesc}" />
+            <meta property="og:image" content="${escapedImage}" />
             <meta property="og:image:type" content="image/jpeg" />
             <meta property="og:image:width" content="1200" />
             <meta property="og:image:height" content="630" />
             <meta property="og:url" content="${baseUrl}/api/share?id=${id}" />
             
-            <meta itemprop="name" content="${product.name}">
-            <meta itemprop="description" content="${descTexto}">
-            <meta itemprop="image" content="${product.image || 'https://www.barracaoreversa.com.br/logo.png'}">
+            <meta itemprop="name" content="${escapedName}">
+            <meta itemprop="description" content="${escapedDesc}">
+            <meta itemprop="image" content="${escapedImage}">
             
             <!-- Twitter -->
             <meta name="twitter:card" content="summary_large_image">
-            <meta name="twitter:title" content="${product.name}">
-            <meta name="twitter:description" content="${descTexto}">
-            <meta name="twitter:image" content="${product.image || 'https://barracao-reversa.vercel.app/logo.png'}">
+            <meta name="twitter:title" content="${escapedName}">
+            <meta name="twitter:description" content="${escapedDesc}">
+            <meta name="twitter:image" content="${escapedImage}">
             
             <script>
                 // Redirect exactly to the product page
@@ -91,7 +109,7 @@ module.exports = async function handler(req, res) {
             </script>
         </head>
         <body>
-            <p>Redirecionando para o produto <a href="${baseUrl}/?p=${id}">${product.name}</a>...</p>
+            <p>Redirecionando para o produto <a href="${baseUrl}/?p=${id}">${escapedName}</a>...</p>
         </body>
         </html>
         `;

@@ -137,13 +137,41 @@ window.triggerSlotUpload = function (index) {
     document.getElementById('multiImageInput').click();
 };
 
-window.triggerUrlUpload = function (e, index) {
+window.triggerUrlUpload = async function (e, index) {
     e.stopPropagation();
-    const url = prompt('Cole o endereço (URL) da imagem aqui:');
-    if (url && (url.startsWith('http') || url.startsWith('data:'))) {
+    let url = prompt('Cole o endereço (URL) da imagem aqui:');
+    if (!url) return;
+
+    url = url.trim();
+    if (url.startsWith('data:')) {
         imagesBase64[index] = url;
         renderPhotoSlots();
-    } else if (url) {
+        return;
+    }
+
+    if (url.startsWith('http')) {
+        if (url.includes('hwmdwlpmutuhrlcgssqw.supabase.co')) {
+            imagesBase64[index] = url;
+            renderPhotoSlots();
+            return;
+        }
+
+        try {
+            showToast('⏳ Processando imagem externa...');
+            const response = await fetch(`/api/download-image?url=${encodeURIComponent(url)}`);
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Falha ao baixar imagem');
+            }
+            const data = await response.json();
+            imagesBase64[index] = data.base64;
+            renderPhotoSlots();
+            showToast('✅ Imagem importada com sucesso!');
+        } catch (err) {
+            console.error(err);
+            showToast('❌ Erro ao baixar imagem externa: ' + err.message);
+        }
+    } else {
         showToast('❌ URL inválida.');
     }
 };
@@ -375,7 +403,7 @@ document.getElementById('formAd').addEventListener('submit', async (e) => {
 
     try {
         showToast('⏳ Processando imagens...');
-        // Filtra apenas fotos preenchidas e faz o upload se forem base64
+        // Filtra apenas fotos preenchidas e faz o upload se forem base64 ou link externo
         for (let img of imagesBase64) {
             if (img === null) continue;
 
@@ -386,8 +414,26 @@ document.getElementById('formAd').addEventListener('submit', async (e) => {
                 const file = new File([blob], `produto_${Date.now()}.jpg`, { type: blob.type });
                 const publicUrl = await uploadToSupabaseBucket(file);
                 finalImages.push(publicUrl);
+            } else if (img.startsWith('http') && !img.includes('hwmdwlpmutuhrlcgssqw.supabase.co')) {
+                // É um link externo (como Mercado Livre). Vamos baixar e salvar no Supabase!
+                try {
+                    showToast('⏳ Importando link de imagem externo...');
+                    const response = await fetch(`/api/download-image?url=${encodeURIComponent(img)}`);
+                    if (!response.ok) {
+                        throw new Error('Falha ao baixar imagem externa');
+                    }
+                    const data = await response.json();
+                    const blob = dataURLtoBlob(data.base64);
+                    const file = new File([blob], `produto_${Date.now()}.jpg`, { type: blob.type });
+                    const publicUrl = await uploadToSupabaseBucket(file);
+                    finalImages.push(publicUrl);
+                } catch (err) {
+                    console.error('Erro ao processar imagem externa:', err);
+                    // Fallback: mantém a URL externa se falhar para não perder a foto
+                    finalImages.push(img);
+                }
             } else {
-                // Já é uma URL (ex: editando produto existente)
+                // Já é uma URL hospedada no nosso Supabase
                 finalImages.push(img);
             }
         }
@@ -1076,7 +1122,9 @@ async function sendWhatsAppFromModal() {
     btn.textContent = '⏳ Enviando...';
 
     const productUrl = `${window.location.origin}/api/share?id=${product.id}`;
-    const productPrice = `R$ ${parseFloat(product.price).toFixed(2).replace('.', ',')}`;
+    
+    // Formata o preço apenas com o número, pois o "R$" já está no template do Meta
+    const productPrice = parseFloat(product.price).toFixed(2).replace('.', ',');
     const productImage = product.images && product.images.length > 0 ? product.images[0] : (product.image || '');
     
     // Handle Individual Contacts (Official API)
@@ -1084,7 +1132,11 @@ async function sendWhatsAppFromModal() {
     let failCount = 0;
 
     if (phonesToSend.length > 0) {
+        let currentIdx = 0;
         for (const phone of phonesToSend) {
+            currentIdx++;
+            btn.textContent = `⏳ Enviando ${currentIdx}/${phonesToSend.length}...`;
+            
             try {
                 const response = await fetch('/api/send-whatsapp', {
                     method: 'POST',
@@ -1097,8 +1149,23 @@ async function sendWhatsAppFromModal() {
                         productImage
                     })
                 });
-                if (response.ok) successCount++;
-                else failCount++;
+                const resultData = await response.json();
+                console.log(`[META DEBUG] Envio para ${phone}:`, resultData);
+                if (resultData.metaResponse && resultData.metaResponse.contacts) {
+                    console.log(`[META DEBUG] WA_ID Identificado pela Meta:`, resultData.metaResponse.contacts[0].wa_id);
+                }
+
+                if (response.ok) {
+                    successCount++;
+                    // Agendar uma checagem de status em 10 segundos
+                    if (resultData.metaResponse && resultData.metaResponse.messages) {
+                        const msgId = resultData.metaResponse.messages[0].id;
+                        setTimeout(() => checkMessageStatus(msgId, phone), 10000);
+                    }
+                } else {
+                    failCount++;
+                    console.error(`Erro no envio para ${phone}:`, resultData);
+                }
             } catch (err) {
                 failCount++;
             }
@@ -1124,6 +1191,48 @@ async function sendWhatsAppFromModal() {
         closeWhatsAppModal();
     } else {
         showToast(`⚠️ ${successCount} enviado(s), ${failCount} falha(s).`);
+    }
+}
+
+window.sendHelloWorldTest = async function() {
+    const manualPhone = document.getElementById('manualPhone').value.trim().replace(/\D/g, '');
+    let phone = manualPhone;
+    if (phone.length === 10 || phone.length === 11) phone = '55' + phone;
+
+    if (!phone) {
+        showToast('⚠️ Digite um número para testar.');
+        return;
+    }
+
+    const btn = document.getElementById('btnSendHelloWorld');
+    if(btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Testando...';
+    }
+
+    try {
+        const response = await fetch('/api/send-whatsapp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                phone,
+                templateName: 'hello_world',
+                productName: 'Teste',
+                productPrice: '0,00',
+                productUrl: 'https://google.com'
+            })
+        });
+        const resultData = await response.json();
+        console.log(`[META DEBUG TEST]`, resultData);
+        if (response.ok) showToast('✅ Teste enviado! Verifique o WhatsApp.');
+        else showToast('❌ Erro no teste: ' + resultData.error);
+    } catch (err) {
+        showToast('❌ Falha na conexão.');
+    } finally {
+        if(btn) {
+            btn.disabled = false;
+            btn.textContent = '🧪 Testar com Hello World';
+        }
     }
 }
 
