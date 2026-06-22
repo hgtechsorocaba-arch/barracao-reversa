@@ -78,6 +78,7 @@ module.exports = async function handler(req, res) {
             statement_descriptor: 'BARRACAO REVERSA',
             external_reference: `BR-${Date.now()}`,
             metadata: {
+                cliente_nome: customerName,
                 produto_id: productId || 'avulso',
                 entrega: delivery + (address ? ` – ${address}` : ''),
                 cidade: customerCity,

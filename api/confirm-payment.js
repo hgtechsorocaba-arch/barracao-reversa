@@ -55,9 +55,20 @@ module.exports = async function handler(req, res) {
         const item = payment.additional_info?.items?.[0] || {};
         const title = item.title || 'Produto';
         const price = payment.transaction_amount || 0;
+        const metadata = payment.metadata || {};
         const payer = payment.payer || {};
-        const name = (payer.first_name || '') + ' ' + (payer.last_name || '');
-        const phone = payment.metadata?.telefone || 'Não informado';
+        const additionalPayer = payment.additional_info?.payer || {};
+        
+        let name = metadata.cliente_nome || '';
+        if (!name.trim()) {
+            name = (additionalPayer.first_name || '') + ' ' + (additionalPayer.last_name || '');
+        }
+        if (!name.trim()) {
+            name = (payer.first_name || '') + ' ' + (payer.last_name || '');
+        }
+        name = name.trim() || 'Não informado';
+
+        const phone = metadata.telefone || 'Não informado';
 
         // 3. Montar a mensagem de notificação para o Everton
         const message = `🔔 *NOVA COMPRA APROVADA!* 🔔\n\n` +
