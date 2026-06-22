@@ -38,9 +38,9 @@ module.exports = async function handler(req, res) {
             return res.status(400).json({ error: 'Dados obrigatórios ausentes' });
         }
 
-        const baseUrl = process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : 'https://barracao-reversa.vercel.app';
+        const protocol = req.headers['x-forwarded-proto'] || 'https';
+        const host = req.headers.host || 'www.barracaoreversa.com.br';
+        const baseUrl = `${protocol}://${host}`;
 
         // Payload Mercado Pago Checkout Pro
         const preference = {

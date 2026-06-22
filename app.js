@@ -693,6 +693,55 @@ window.changeDetailMedia = function (el, url, type) {
     }
 }
 
+// ── PAYMENT CONFIRMATION MODAL ────────────────────────
+function showPaymentConfirmationModal(paymentId, externalRef) {
+    const modalHtml = `
+        <div class="modal-overlay active" id="successPaymentModal" style="display: flex; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; backdrop-filter: blur(4px);">
+            <div class="modal-box" style="background: #0d0d0d; border: 1px solid #FFD600; padding: 30px; border-radius: 12px; max-width: 450px; width: 90%; text-align: center; color: #fff; box-shadow: 0 0 20px rgba(255, 214, 0, 0.2);">
+                <div style="font-size: 3.5rem; color: #FFD600; margin-bottom: 15px; filter: drop-shadow(0 0 8px rgba(255,214,0,0.4));">🎉</div>
+                <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 10px; color: #fff; text-transform: uppercase; letter-spacing: 1px;">Pagamento Confirmado!</h2>
+                <p style="color: #bbb; font-size: 0.95rem; line-height: 1.5; margin-bottom: 20px;">
+                    Seu pagamento foi recebido com sucesso pelo Mercado Pago!
+                </p>
+                <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 25px; text-align: left; font-size: 0.85rem; border: 1px solid #222; color: #ccc;">
+                    ${paymentId ? `<div style="margin-bottom: 4px;"><strong>ID da Transação:</strong> ${paymentId}</div>` : ''}
+                    ${externalRef ? `<div><strong>Referência do Pedido:</strong> ${externalRef}</div>` : ''}
+                </div>
+                <button type="button" onclick="sendSuccessWppMessage('${paymentId}', '${externalRef}')" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; background: #FFD600; color: #0d0d0d; border: none; border-radius: 8px; font-weight: 800; font-size: 1rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(255,214,0,0.3); margin-top: 10px;">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.559 4.14 1.535 5.874L.057 23.547a.75.75 0 0 0 .915.921l5.798-1.52A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.893 0-3.665-.517-5.18-1.418l-.37-.219-3.842 1.008 1.026-3.741-.24-.387A9.953 9.953 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+                    Combinar Entrega no WhatsApp
+                </button>
+                <button type="button" onclick="closeSuccessPaymentModal()" style="background: transparent; color: #999; border: none; margin-top: 15px; cursor: pointer; text-decoration: underline; font-size: 0.85rem; transition: color 0.2s;" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='#999'">
+                    Voltar para a Loja
+                </button>
+            </div>
+        </div>
+    `;
+    const div = document.createElement('div');
+    div.id = 'successPaymentModalWrapper';
+    div.innerHTML = modalHtml;
+    document.body.appendChild(div);
+    document.body.style.overflow = 'hidden';
+}
+
+window.closeSuccessPaymentModal = function() {
+    const wrapper = document.getElementById('successPaymentModalWrapper');
+    if (wrapper) wrapper.remove();
+    document.body.style.overflow = '';
+};
+
+window.sendSuccessWppMessage = function(paymentId, externalRef) {
+    const whatsappNum = CONFIG.whatsappNumber || '5515996966956';
+    let text = `Olá Everton! Acabei de realizar o pagamento do meu pedido pelo site via Mercado Pago.\n\n`;
+    if (paymentId) text += `*ID da Transação:* ${paymentId}\n`;
+    if (externalRef) text += `*Referência do Pedido:* ${externalRef}\n`;
+    text += `\nGostaria de combinar os detalhes para a retirada do produto!`;
+    
+    const wppUrl = `https://wa.me/${whatsappNum}?text=${encodeURIComponent(text)}`;
+    window.open(wppUrl, '_blank');
+    closeSuccessPaymentModal();
+};
+
 async function init() {
     // Carrega produtos
     await loadProducts();
@@ -701,8 +750,22 @@ async function init() {
     // Apply Supabase Customizations
     await applyStoreSettings();
 
-    // Check custom URLs
     const urlParams = new URLSearchParams(window.location.search);
+
+    // Check order confirmation
+    const pedido = urlParams.get('pedido');
+    if (pedido === 'confirmado') {
+        const paymentId = urlParams.get('payment_id') || '';
+        const externalRef = urlParams.get('external_reference') || '';
+        
+        setTimeout(() => {
+            showPaymentConfirmationModal(paymentId, externalRef);
+            // Limpa parâmetros da URL para evitar reexibição do modal no refresh
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }, 500);
+    }
+
+    // Check custom URLs
     const productId = urlParams.get('p');
     if (productId) {
         setTimeout(() => {
