@@ -10,9 +10,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const token = process.env.WHATSAPP_TOKEN;
-    const phoneId = process.env.WHATSAPP_PHONE_ID;
-    const templateName = overrideTemplate || process.env.WHATSAPP_TEMPLATE_NAME || 'venda_produto_barracao';
+    const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : null;
+    const phoneId = process.env.WHATSAPP_PHONE_ID ? process.env.WHATSAPP_PHONE_ID.trim() : null;
+    const templateName = (overrideTemplate || process.env.WHATSAPP_TEMPLATE_NAME || 'venda_produto_barracao').trim();
 
     if (!token || !phoneId) {
         return res.status(500).json({ error: 'WhatsApp API credentials not configured in Vercel environment' });

@@ -1,12 +1,10 @@
 const https = require('https');
 
-// Token de verificação para o webhook da Meta (você pode escolher qualquer string, mas tem que bater com o que for colocado no painel da Meta)
-// Em produção, isso deve vir de process.env.WEBHOOK_VERIFY_TOKEN
-const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || 'barracao_reversa_2025_token_secreto';
+const VERIFY_TOKEN = (process.env.WEBHOOK_VERIFY_TOKEN || 'barracao_reversa_2025_token_secreto').trim();
 
 // Credenciais da Meta API
-const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v19.0/594382890426533/messages'; // Ajuste o ID do telefone se necessário
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const WHATSAPP_API_URL = (process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v19.0/594382890426533/messages').trim(); // Ajuste o ID do telefone se necessário
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : '';
 
 // Credenciais Supabase
 const supabaseUrl = 'https://hwmdwlpmutuhrlcgssqw.supabase.co';
