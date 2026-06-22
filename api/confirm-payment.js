@@ -19,7 +19,8 @@ module.exports = async function handler(req, res) {
 
     const mpToken = process.env.MP_ACCESS_TOKEN;
     const zapLinkSecret = process.env.ZAPLINK_EXTERNAL_SECRET || 'hgtech_bot_secret_123';
-    const notifyPhone = process.env.NOTIFY_PHONE || '5515996966956'; // Número do Everton
+    const notifyPhone = process.env.NOTIFY_PHONE || '5515996966956'; // Número do Everton ou JID do Grupo
+    const instancePhone = process.env.ZAPLINK_INSTANCE_PHONE || '5515996966956'; // Número da instância do Everton
 
     if (!mpToken) {
         return res.status(500).json({ error: 'MP_ACCESS_TOKEN not configured' });
@@ -58,8 +59,8 @@ module.exports = async function handler(req, res) {
             `Aprovado automaticamente via Mercado Pago!`;
 
         // 4. Enviar mensagem via ZapLink
-        console.log(`Enviando mensagem via ZapLink para o número ${notifyPhone}...`);
-        const zapLinkResponse = await sendZapLinkMessage(notifyPhone, message, zapLinkSecret);
+        console.log(`Enviando mensagem via ZapLink para o destino ${notifyPhone}...`);
+        const zapLinkResponse = await sendZapLinkMessage(notifyPhone, message, zapLinkSecret, instancePhone);
 
         return res.status(200).json({ 
             success: true, 
@@ -104,12 +105,13 @@ function getMercadoPagoPayment(paymentId, accessToken) {
 }
 
 // Disparar mensagem via API ZapLink
-function sendZapLinkMessage(phone, message, secret) {
+function sendZapLinkMessage(phone, message, secret, instancePhone) {
     return new Promise((resolve, reject) => {
         const payload = JSON.stringify({
             secret: secret,
             message: message,
-            groupId: phone // O endpoint 'send-message' do ZapLink recebe o número no parâmetro 'groupId'
+            groupId: phone, // O endpoint 'send-message' do ZapLink recebe o número no parâmetro 'groupId'
+            instancePhone: instancePhone
         });
 
         const options = {
