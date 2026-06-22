@@ -152,9 +152,9 @@ function renderProducts(list) {
 
         // Carousel photos
         const photos = p.images && p.images.length > 0 ? p.images : [p.image];
-        const imgClass = p.fit_image ? 'img-fit-contain' : '';
+        const imgClass = (p.fit_image ? 'img-fit-contain' : '') + ' cursor-zoom';
         const photosHtml = photos.map(img => `
-            <img src="${img}" class="${imgClass}" alt="${p.name}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><rect width=\'100%\' height=\'100%\' fill=\'%231e2a3a\'/><text y=\'50%\' x=\'50%\' text-anchor=\'middle\' fill=\'%238892a4\' font-size=\'14\' dy=\'.3em\'>📷 Sem foto</text></svg>'">
+            <img src="${img}" class="${imgClass}" alt="${p.name}" loading="lazy" onclick="openLightbox(this.src); event.stopPropagation();" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><rect width=\'100%\' height=\'100%\' fill=\'%231e2a3a\'/><text y=\'50%\' x=\'50%\' text-anchor=\'middle\' fill=\'%238892a4\' font-size=\'14\' dy=\'.3em\'>📷 Sem foto</text></svg>'">
         `).join('');
 
         const indicatorsHtml = photos.length > 1 ? `
