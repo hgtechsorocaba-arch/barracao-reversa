@@ -86,6 +86,10 @@ module.exports = async function handler(req, res) {
             },
         };
 
+        if (!baseUrl.includes('localhost') && !baseUrl.includes('127.0.0.1')) {
+            preference.notification_url = `${baseUrl}/api/confirm-payment`;
+        }
+
         const mpResponse = await callMercadoPago(
             '/checkout/preferences',
             'POST',

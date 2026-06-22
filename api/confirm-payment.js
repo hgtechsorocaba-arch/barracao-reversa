@@ -12,9 +12,21 @@ module.exports = async function handler(req, res) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { paymentId, externalRef } = req.body;
+    let paymentId = req.body.paymentId;
+    let externalRef = req.body.externalRef;
+
+    // Se for Webhook do Mercado Pago (formato contendo data.id ou id direto)
+    if (!paymentId && req.body.data && req.body.data.id) {
+        paymentId = req.body.data.id;
+    } else if (!paymentId && req.body.id && (req.body.type === 'payment' || req.body.action?.startsWith('payment.'))) {
+        paymentId = req.body.id;
+    } else if (!paymentId && req.body.topic === 'payment' && req.body.resource) {
+        paymentId = req.body.resource.split('/').pop();
+    }
+
     if (!paymentId) {
-        return res.status(400).json({ error: 'Missing paymentId' });
+        console.log('Webhook recebido sem ID de pagamento relevante:', req.body);
+        return res.status(200).json({ success: true, message: 'Webhook received but ignored (no payment ID found)' });
     }
 
     const mpToken = process.env.MP_ACCESS_TOKEN;
@@ -55,7 +67,7 @@ module.exports = async function handler(req, res) {
             `*Telefone:* ${phone}\n` +
             `*E-mail:* ${payer.email || 'Não informado'}\n` +
             `*ID do Pagamento:* ${paymentId}\n` +
-            `*Referência:* ${externalRef || 'Nenhuma'}\n\n` +
+            `*Referência:* ${payment.external_reference || externalRef || 'Nenhuma'}\n\n` +
             `Aprovado automaticamente via Mercado Pago!`;
 
         // 4. Enviar mensagem via ZapLink
