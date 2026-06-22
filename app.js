@@ -154,7 +154,7 @@ function renderProducts(list) {
         const photos = p.images && p.images.length > 0 ? p.images : [p.image];
         const imgClass = (p.fit_image ? 'img-fit-contain' : '') + ' cursor-zoom';
         const photosHtml = photos.map(img => `
-            <img src="${img}" class="${imgClass}" alt="${p.name}" loading="lazy" onclick="openLightbox(this.src); event.stopPropagation();" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><rect width=\'100%\' height=\'100%\' fill=\'%231e2a3a\'/><text y=\'50%\' x=\'50%\' text-anchor=\'middle\' fill=\'%238892a4\' font-size=\'14\' dy=\'.3em\'>📷 Sem foto</text></svg>'">
+            <img src="${img}" class="${imgClass}" alt="${p.name}" loading="lazy" onclick="openLightbox(this.src, '${p.id}'); event.stopPropagation();" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><rect width=\'100%\' height=\'100%\' fill=\'%231e2a3a\'/><text y=\'50%\' x=\'50%\' text-anchor=\'middle\' fill=\'%238892a4\' font-size=\'14\' dy=\'.3em\'>📷 Sem foto</text></svg>'">
         `).join('');
 
         const indicatorsHtml = photos.length > 1 ? `
@@ -397,7 +397,7 @@ function renderProductDetails(p) {
                     ${thumbsHtml}
                 </div>
                 <div class="details-image-section" id="mainDetailMediaContainer">
-                    <img id="mainDetailImage" src="${images[0]}" class="main-detail-img cursor-zoom" onclick="openLightbox(this.src)" title="Clique para ampliar">
+                    <img id="mainDetailImage" src="${images[0]}" class="main-detail-img cursor-zoom" onclick="openLightbox(this.src, '${p.id}')" title="Clique para ampliar">
                 </div>
             </div>
 
@@ -689,7 +689,7 @@ window.changeDetailMedia = function (el, url, type) {
         `;
     } else {
         container.innerHTML = `
-            <img id="mainDetailImage" src="${url}" class="main-detail-img cursor-zoom" onclick="openLightbox(this.src)" title="Clique para ampliar">
+            <img id="mainDetailImage" src="${url}" class="main-detail-img cursor-zoom" onclick="openLightbox(this.src, currentProduct ? currentProduct.id : null)" title="Clique para ampliar">
         `;
     }
 }
@@ -793,24 +793,141 @@ async function init() {
 init();
 
 // ── LIGHTBOX (ZOOM) CONTROLLERS ──────────────────────
-window.openLightbox = function(src) {
+let lightboxImages = [];
+let currentLightboxIndex = 0;
+
+window.openLightbox = function(src, productId) {
     const overlay = document.getElementById('imageLightbox');
     const img = document.getElementById('lightboxImage');
-    if (overlay && img) {
-        img.src = src;
-        overlay.classList.add('active');
-        document.body.style.overflow = 'hidden';
+    if (!overlay || !img) return;
+
+    lightboxImages = [];
+    currentLightboxIndex = 0;
+
+    let prod = null;
+
+    // 1. Try to find the product in products/allProducts list using the ID passed
+    if (productId) {
+        const list = (typeof allProducts !== 'undefined' ? allProducts : products) || [];
+        prod = list.find(item => item.id === productId || String(item.id) === String(productId));
     }
+
+    // 2. Fallback to currentProduct if details modal is active
+    if (!prod) {
+        const detailsView = document.getElementById('productDetailsView');
+        const checkoutModal = document.getElementById('checkoutModal');
+        if (checkoutModal && checkoutModal.classList.contains('active') && detailsView && detailsView.style.display !== 'none') {
+            prod = currentProduct;
+        }
+    }
+
+    if (prod) {
+        lightboxImages = prod.images && prod.images.length > 0 ? prod.images : [prod.image];
+    }
+
+    // 3. Fallback to activeCard (carousel images) if still empty
+    if (lightboxImages.length === 0) {
+        const clickedCard = document.activeElement && document.activeElement.closest('.product-card');
+        const activeCard = clickedCard || Array.from(document.querySelectorAll('.product-card')).find(card => card.contains(document.activeElement));
+        if (activeCard) {
+            const cardImgs = Array.from(activeCard.querySelectorAll('.card-image-wrap img')).map(el => el.src);
+            if (cardImgs.length > 0) lightboxImages = cardImgs;
+        }
+    }
+
+    // 4. Ultimate fallback to just the clicked image
+    if (lightboxImages.length === 0) {
+        lightboxImages = [src];
+    }
+
+    currentLightboxIndex = lightboxImages.indexOf(src);
+    if (currentLightboxIndex === -1) {
+        currentLightboxIndex = lightboxImages.findIndex(imgSrc => {
+            if (!imgSrc) return false;
+            try {
+                const url1 = new URL(imgSrc, window.location.origin).pathname;
+                const url2 = new URL(src, window.location.origin).pathname;
+                return url1 === url2;
+            } catch (e) {
+                const name1 = imgSrc.split('/').pop().split('?')[0];
+                const name2 = src.split('/').pop().split('?')[0];
+                return name1 === name2;
+            }
+        });
+    }
+    if (currentLightboxIndex === -1) currentLightboxIndex = 0;
+
+    img.src = lightboxImages[currentLightboxIndex];
+
+    // Check fit_image layout option
+    if (prod && prod.fit_image) {
+        img.classList.add('img-fit-contain');
+    } else {
+        img.classList.remove('img-fit-contain');
+    }
+
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    // Show/hide navigation arrows based on count
+    updateLightboxNavigation();
 };
 
 window.closeLightbox = function() {
     const overlay = document.getElementById('imageLightbox');
     if (overlay) {
         overlay.classList.remove('active');
-        // Only restore scroll if checkout modal is not open
         const checkoutModal = document.getElementById('checkoutModal');
         if (!checkoutModal || !checkoutModal.classList.contains('active')) {
             document.body.style.overflow = '';
         }
     }
 };
+
+window.changeLightboxImage = function(direction) {
+    if (lightboxImages.length <= 1) return;
+
+    currentLightboxIndex += direction;
+    if (currentLightboxIndex < 0) {
+        currentLightboxIndex = lightboxImages.length - 1;
+    } else if (currentLightboxIndex >= lightboxImages.length) {
+        currentLightboxIndex = 0;
+    }
+
+    const img = document.getElementById('lightboxImage');
+    if (img) {
+        img.style.opacity = '0';
+        setTimeout(() => {
+            img.src = lightboxImages[currentLightboxIndex];
+            img.style.opacity = '1';
+        }, 100);
+    }
+};
+
+function updateLightboxNavigation() {
+    const prevBtn = document.querySelector('.lightbox-prev');
+    const nextBtn = document.querySelector('.lightbox-next');
+    if (prevBtn && nextBtn) {
+        if (lightboxImages.length > 1) {
+            prevBtn.style.display = 'flex';
+            nextBtn.style.display = 'flex';
+        } else {
+            prevBtn.style.display = 'none';
+            nextBtn.style.display = 'none';
+        }
+    }
+}
+
+// Teclado (Esc e Setas) para a Galeria
+document.addEventListener('keydown', (e) => {
+    const overlay = document.getElementById('imageLightbox');
+    if (overlay && overlay.classList.contains('active')) {
+        if (e.key === 'Escape') {
+            closeLightbox();
+        } else if (e.key === 'ArrowLeft') {
+            changeLightboxImage(-1);
+        } else if (e.key === 'ArrowRight') {
+            changeLightboxImage(1);
+        }
+    }
+});

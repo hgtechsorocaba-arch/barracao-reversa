@@ -207,7 +207,9 @@
         <!-- IMAGE LIGHTBOX (ZOOM) -->
         <div id="imageLightbox" class="lightbox-overlay" onclick="closeLightbox()">
             <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+            <button class="lightbox-prev" onclick="changeLightboxImage(-1); event.stopPropagation();">‹</button>
             <img id="lightboxImage" src="" class="lightbox-img" onclick="event.stopPropagation()">
+            <button class="lightbox-next" onclick="changeLightboxImage(1); event.stopPropagation();">›</button>
         </div>
 
 

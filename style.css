@@ -1924,3 +1924,59 @@ select option {
 .cursor-zoom {
   cursor: zoom-in;
 }
+
+/* ── LIGHTBOX NAVIGATION BUTTONS ───────────────────── */
+.lightbox-prev,
+.lightbox-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  color: #fff;
+  font-size: 3rem;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: background 0.2s, opacity 0.2s;
+  z-index: 100000;
+  line-height: 1;
+}
+
+.lightbox-prev:hover,
+.lightbox-next:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.lightbox-prev {
+  left: 24px;
+}
+
+.lightbox-next {
+  right: 24px;
+}
+
+/* Lightbox mobile adjustments */
+@media (max-width: 768px) {
+  .lightbox-prev,
+  .lightbox-next {
+    width: 46px;
+    height: 46px;
+    font-size: 2rem;
+  }
+  .lightbox-prev {
+    left: 10px;
+  }
+  .lightbox-next {
+    right: 10px;
+  }
+  .lightbox-img {
+    max-width: 95%;
+    max-height: 80%;
+  }
+}
