@@ -152,8 +152,9 @@ function renderProducts(list) {
 
         // Carousel photos
         const photos = p.images && p.images.length > 0 ? p.images : [p.image];
+        const imgClass = p.fit_image ? 'img-fit-contain' : '';
         const photosHtml = photos.map(img => `
-            <img src="${img}" alt="${p.name}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><rect width=\'100%\' height=\'100%\' fill=\'%231e2a3a\'/><text y=\'50%\' x=\'50%\' text-anchor=\'middle\' fill=\'%238892a4\' font-size=\'14\' dy=\'.3em\'>📷 Sem foto</text></svg>'">
+            <img src="${img}" class="${imgClass}" alt="${p.name}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><rect width=\'100%\' height=\'100%\' fill=\'%231e2a3a\'/><text y=\'50%\' x=\'50%\' text-anchor=\'middle\' fill=\'%238892a4\' font-size=\'14\' dy=\'.3em\'>📷 Sem foto</text></svg>'">
         `).join('');
 
         const indicatorsHtml = photos.length > 1 ? `
@@ -396,7 +397,7 @@ function renderProductDetails(p) {
                     ${thumbsHtml}
                 </div>
                 <div class="details-image-section" id="mainDetailMediaContainer">
-                    <img id="mainDetailImage" src="${images[0]}" class="main-detail-img">
+                    <img id="mainDetailImage" src="${images[0]}" class="main-detail-img cursor-zoom" onclick="openLightbox(this.src)" title="Clique para ampliar">
                 </div>
             </div>
 
@@ -688,7 +689,7 @@ window.changeDetailMedia = function (el, url, type) {
         `;
     } else {
         container.innerHTML = `
-            <img id="mainDetailImage" src="${url}" class="main-detail-img">
+            <img id="mainDetailImage" src="${url}" class="main-detail-img cursor-zoom" onclick="openLightbox(this.src)" title="Clique para ampliar">
         `;
     }
 }
@@ -790,3 +791,26 @@ async function init() {
 }
 
 init();
+
+// ── LIGHTBOX (ZOOM) CONTROLLERS ──────────────────────
+window.openLightbox = function(src) {
+    const overlay = document.getElementById('imageLightbox');
+    const img = document.getElementById('lightboxImage');
+    if (overlay && img) {
+        img.src = src;
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+};
+
+window.closeLightbox = function() {
+    const overlay = document.getElementById('imageLightbox');
+    if (overlay) {
+        overlay.classList.remove('active');
+        // Only restore scroll if checkout modal is not open
+        const checkoutModal = document.getElementById('checkoutModal');
+        if (!checkoutModal || !checkoutModal.classList.contains('active')) {
+            document.body.style.overflow = '';
+        }
+    }
+};

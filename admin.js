@@ -342,6 +342,7 @@ window.editAd = function (id) {
     document.getElementById('adPrice').value = p.price;
     document.getElementById('adStock').value = p.stock || 1;
     document.getElementById('adUrgent').checked = p.urgent || false;
+    document.getElementById('adFitImage').checked = p.fit_image || false;
     document.getElementById('adVideo').value = p.video_url || '';
 
     // Carregar Fotos
@@ -456,6 +457,7 @@ document.getElementById('formAd').addEventListener('submit', async (e) => {
             price: priceFloat,
             stock: parseInt(document.getElementById('adStock').value, 10),
             urgent: document.getElementById('adUrgent').checked,
+            fit_image: document.getElementById('adFitImage').checked,
             video_url: document.getElementById('adVideo').value.trim(),
             images: finalImages,
             image: finalImages[0],

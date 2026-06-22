@@ -1,5 +1,6 @@
 -- Para aplicar no painel SQL do Supabase:
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS video_url TEXT;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS fit_image BOOLEAN DEFAULT false;
 
 -- Script completo de criação (caso queira recriar do zero):
 
@@ -13,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     price NUMERIC(10, 2) NOT NULL,
     stock INTEGER DEFAULT 0,
     urgent BOOLEAN DEFAULT false,
+    fit_image BOOLEAN DEFAULT false,
     image TEXT, -- URL da imagem principal
     images TEXT[], -- Array de URLs de imagens adicionais
     video_url TEXT, -- URL do vídeo (opcional)
