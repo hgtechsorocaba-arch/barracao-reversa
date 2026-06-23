@@ -759,19 +759,8 @@ async function init() {
         const paymentId = urlParams.get('payment_id') || '';
         const externalRef = urlParams.get('external_reference') || '';
         
-        // Dispara a notificação automática para o servidor em segundo plano
-        if (paymentId) {
-            fetch('/api/confirm-payment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ paymentId, externalRef })
-            })
-            .then(res => res.json())
-            .then(data => console.log('Confirmação automática do pagamento processada:', data))
-            .catch(err => console.error('Erro ao enviar confirmação automática:', err));
-        }
+        // A notificação é disparada automaticamente pelo webhook do Mercado Pago (notification_url)
+        // Não precisamos chamar /api/confirm-payment aqui para evitar duplicidade
 
         setTimeout(() => {
             showPaymentConfirmationModal(paymentId, externalRef);

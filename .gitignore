@@ -1,2 +1,11 @@
 .vercel
 .env*.local
+node_modules/
+.env*
+*.json
+*.log
+*.bkp
+temp.*
+test*.js
+check_*.js
+index_manutencao.html

@@ -44,3 +44,14 @@ ALTER TABLE public.whatsapp_groups ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Grupos são públicos" ON public.whatsapp_groups FOR SELECT USING (true);
 CREATE POLICY "Escrita para todos grupos" ON public.whatsapp_groups FOR ALL USING (true) WITH CHECK (true);
 
+-- Tabela: processed_payments (Deduplicação de notificações de pagamento)
+CREATE TABLE IF NOT EXISTS public.processed_payments (
+    payment_id TEXT PRIMARY KEY,
+    processed_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Habilitar RLS e Políticas para processed_payments
+ALTER TABLE public.processed_payments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Leitura para todos processed_payments" ON public.processed_payments FOR SELECT USING (true);
+CREATE POLICY "Escrita para todos processed_payments" ON public.processed_payments FOR INSERT WITH CHECK (true);
+

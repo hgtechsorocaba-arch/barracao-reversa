@@ -55,18 +55,18 @@ module.exports = async function handler(req, res) {
         const supabaseUrl = 'https://hwmdwlpmutuhrlcgssqw.supabase.co';
         const supabaseKey = 'sb_publishable_lo4UybgUFxCbAKVbT-Pkzw_8JEipiqT';
 
-        // Evitar duplicidade (Deduplicação)
-        const alreadyProcessed = await isPaymentAlreadyProcessed(paymentId, supabaseUrl, supabaseKey);
-        if (alreadyProcessed) {
+        // Deduplicação atômica: tenta inserir o pagamento como processado.
+        // Se já existir (UNIQUE constraint), o UPSERT retorna 0 linhas → significa que já foi processado.
+        // Isso evita a race condition do antigo check-then-insert.
+        const wasInserted = await tryMarkPaymentAsProcessed(paymentId, supabaseUrl, supabaseKey);
+        if (!wasInserted) {
             console.log(`Pagamento ${paymentId} já foi processado e notificado anteriormente. Ignorando.`);
             return res.status(200).json({ 
                 success: true, 
                 message: 'Payment already processed and notified' 
             });
         }
-
-        // Marcar como processado antes de enviar para evitar condições de corrida (race conditions)
-        await markPaymentAsProcessed(paymentId, supabaseUrl, supabaseKey);
+        console.log(`Pagamento ${paymentId} marcado como processado (primeira vez).`);
 
         // 2. Extrair informações do pagamento
         const item = payment.additional_info?.items?.[0] || {};
@@ -200,48 +200,11 @@ function sendZapLinkMessage(phone, message, secret, instancePhone) {
     });
 }
 
-// Verificar se o pagamento já foi processado no Supabase
-function isPaymentAlreadyProcessed(paymentId, supabaseUrl, supabaseKey) {
-    return new Promise((resolve) => {
-        const urlObj = new URL(`${supabaseUrl}/rest/v1/processed_payments?payment_id=eq.${encodeURIComponent(paymentId)}&select=payment_id`);
-        const options = {
-            hostname: urlObj.hostname,
-            path: urlObj.pathname + urlObj.search,
-            method: 'GET',
-            headers: {
-                'apikey': supabaseKey,
-                'Authorization': `Bearer ${supabaseKey}`,
-                'Content-Type': 'application/json'
-            }
-        };
-
-        const req = https.request(options, (res) => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                try {
-                    const result = JSON.parse(data);
-                    if (Array.isArray(result) && result.length > 0) {
-                        resolve(true); // Já processado
-                    } else {
-                        resolve(false);
-                    }
-                } catch {
-                    resolve(false);
-                }
-            });
-        });
-
-        req.on('error', (err) => {
-            console.error('Error checking processed payment:', err);
-            resolve(false);
-        });
-        req.end();
-    });
-}
-
-// Salvar no Supabase que o pagamento foi processado
-function markPaymentAsProcessed(paymentId, supabaseUrl, supabaseKey) {
+// Deduplicação atômica: tenta inserir o payment_id no Supabase.
+// Usa o header 'Prefer: resolution=ignore-duplicates' do PostgREST para que,
+// se o registro já existir (UNIQUE/PK constraint), a operação retorne 200 sem inserir.
+// Retorna true se inseriu (primeira vez), false se já existia (duplicata).
+function tryMarkPaymentAsProcessed(paymentId, supabaseUrl, supabaseKey) {
     return new Promise((resolve) => {
         const payload = JSON.stringify({ payment_id: String(paymentId) });
         const urlObj = new URL(`${supabaseUrl}/rest/v1/processed_payments`);
@@ -254,20 +217,38 @@ function markPaymentAsProcessed(paymentId, supabaseUrl, supabaseKey) {
                 'apikey': supabaseKey,
                 'Authorization': `Bearer ${supabaseKey}`,
                 'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(payload)
+                'Content-Length': Buffer.byteLength(payload),
+                // ignore-duplicates: se o payment_id já existe, retorna 200 sem inserir
+                // return=representation: retorna as linhas efetivamente inseridas
+                'Prefer': 'resolution=ignore-duplicates,return=representation'
             }
         };
 
         const req = https.request(options, (res) => {
-            res.on('data', () => {});
+            let data = '';
+            res.on('data', chunk => data += chunk);
             res.on('end', () => {
-                resolve(res.statusCode === 201);
+                try {
+                    const result = JSON.parse(data);
+                    // Se retornou um array com 1+ item, significa que inseriu (primeira vez)
+                    // Se retornou array vazio, significa que já existia (duplicata ignorada)
+                    if (Array.isArray(result) && result.length > 0) {
+                        resolve(true); // Primeira vez — prosseguir com notificação
+                    } else {
+                        resolve(false); // Já existia — duplicata
+                    }
+                } catch {
+                    // Se não conseguiu parsear, assume que é a primeira vez para não perder a notificação
+                    console.error('Erro ao parsear resposta do UPSERT de deduplicação:', data);
+                    resolve(true);
+                }
             });
         });
 
         req.on('error', (err) => {
-            console.error('Error marking payment as processed:', err);
-            resolve(false);
+            console.error('Erro ao tentar marcar pagamento como processado:', err);
+            // Em caso de erro de rede, permite prosseguir para não perder notificação
+            resolve(true);
         });
 
         req.write(payload);
