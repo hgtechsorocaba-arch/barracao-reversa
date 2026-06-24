@@ -88,6 +88,12 @@
                     </svg>
                     Configurações
                 </a>
+                <a href="#" class="nav-item" data-view="view-reports">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+                    </svg>
+                    Relatório de Vendas
+                </a>
                 <div class="spacer"></div>
                 <a href="/" class="nav-item nav-back">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
@@ -302,6 +308,23 @@
                             </div>
                         </div>
 
+                        <!-- Gateway de Pagamento -->
+                        <div class="card mt-4">
+                            <h2 class="card-title">Gateway de Pagamento</h2>
+                            <div class="form-group mb-3">
+                                <label for="setPaymentGateway">Gateway Ativo</label>
+                                <select id="setPaymentGateway" class="form-control">
+                                    <option value="mercadopago">Mercado Pago (Padrão)</option>
+                                    <option value="pagarme">Pagar.me (Stone)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="groupPagarmeKey" style="display: none;">
+                                <label for="setPagarmeApiKey">Chave API Pagar.me (Secret Key)</label>
+                                <input type="password" id="setPagarmeApiKey" class="form-control" placeholder="Ex: sk_test_... ou sk_live_...">
+                                <small class="color-mute">Chave secreta obtida no painel do Pagar.me.</small>
+                            </div>
+                        </div>
+
                         <!-- Visual e Identidade -->
                         <div class="card mt-4">
                             <h2 class="card-title">Identidade Visual</h2>
@@ -419,6 +442,89 @@
                     </div>
                 </div>
             </div>
+
+            <!-- VIEW: RELATÓRIO DE VENDAS -->
+            <div id="view-reports" class="view">
+                <div class="view-header">
+                    <h1>📊 Relatório de Vendas</h1>
+                    <div class="action-buttons-group">
+                        <button class="btn-secondary" onclick="exportReportsToExcel()">📄 Exportar Excel</button>
+                        <button class="btn-primary" onclick="printReports()">🖨️ Imprimir / PDF</button>
+                    </div>
+                </div>
+
+                <!-- Stats summary cards -->
+                <div class="stats-grid">
+                    <div class="card stat-card">
+                        <div class="stat-icon" style="background-color: rgba(76, 175, 80, 0.1); color: #4caf50;">
+                            💰
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Aprovado</span>
+                            <h3 id="statTotalApproved" class="stat-value">R$ 0,00</h3>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon" style="background-color: rgba(33, 150, 243, 0.1); color: #2196f3;">
+                            📦
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Vendas</span>
+                            <h3 id="statTotalCount" class="stat-value">0</h3>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon" style="background-color: rgba(255, 152, 0, 0.1); color: #ff9800;">
+                            ⏳
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Pendente</span>
+                            <h3 id="statTotalPending" class="stat-value">R$ 0,00</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-table">
+                    <div class="table-controls">
+                        <div class="filter-group" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                            <input type="text" id="searchReports" class="input-search" placeholder="Buscar por cliente, produto, ref ou telefone..." oninput="filterReports()" style="flex: 1; min-width: 200px;">
+                            <select id="filterReportStatus" class="form-control" style="max-width: 200px; min-width: 150px;" onchange="filterReports()">
+                                <option value="all">Todos os Status</option>
+                                <option value="approved">Aprovados</option>
+                                <option value="pending">Pendentes / Em análise</option>
+                                <option value="rejected">Rejeitados / Cancelados</option>
+                            </select>
+                            <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
+                                <label style="font-size: 0.85rem; color: var(--ml-text-muted); font-weight: 600; margin: 0; white-space: nowrap;">De:</label>
+                                <input type="date" id="filterReportStartDate" class="form-control" style="padding: 8px 10px; font-size: 0.9rem;" onchange="filterReports()">
+                                <label style="font-size: 0.85rem; color: var(--ml-text-muted); font-weight: 600; margin: 0; white-space: nowrap;">Até:</label>
+                                <input type="date" id="filterReportEndDate" class="form-control" style="padding: 8px 10px; font-size: 0.9rem;" onchange="filterReports()">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="ads-table">
+                            <thead>
+                                <tr>
+                                    <th>Data / Hora</th>
+                                    <th>Cliente / Telefone</th>
+                                    <th>Produto</th>
+                                    <th width="120">Valor</th>
+                                    <th width="140">Forma Pagto</th>
+                                    <th width="130">Status</th>
+                                    <th width="100">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsTbody">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyReports" class="empty-state" style="display: none;">
+                        <p>Nenhuma venda encontrada.</p>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <!-- MODAL: ADICIONAR CONTATO -->
@@ -493,6 +599,24 @@
                     <input type="text" id="groupInvite" class="form-control" placeholder="Ex: chat.whatsapp.com/...">
                 </div>
                 <button class="btn-primary btn-block" onclick="saveGroup()">Salvar Grupo</button>
+            </div>
+        </div>
+
+        <!-- MODAL: DETALHES DA VENDA -->
+        <div class="modal-overlay" id="saleDetailsModal" style="display:none;">
+            <div class="modal-box modal-lg">
+                <button class="modal-close-btn" onclick="closeSaleDetailsModal()">✕</button>
+                <div class="invoice-header">
+                    <div class="invoice-title">
+                        <h2>Comprovante de Venda</h2>
+                        <span id="invoiceRef">REF: #</span>
+                    </div>
+                    <button class="btn-primary btn-sm btn-print-invoice" onclick="printInvoice()">🖨️ Imprimir Venda</button>
+                </div>
+                
+                <div id="invoiceContent" class="invoice-content">
+                    <!-- Preenchido via JS -->
+                </div>
             </div>
         </div>
     </div>

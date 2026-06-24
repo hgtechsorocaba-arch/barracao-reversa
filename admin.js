@@ -10,6 +10,7 @@ let products = [];
 let imagesBase64 = new Array(10).fill(null);
 let variations = [];
 let editingId = null; // Guardar ID do produto sendo editado
+let sales = []; // Relatórios de vendas de Mercado Pago
 
 // ── INIT & AUTH ──────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -79,6 +80,8 @@ function switchView(viewId) {
     if (viewId === 'view-list') {
         loadProducts().then(() => renderTable());
         resetForm();
+    } else if (viewId === 'view-reports') {
+        loadSalesReport();
     }
 }
 
@@ -507,7 +510,9 @@ let storeSettings = {
     whatsapp_number: '5515996966956',
     primary_color: '#1e2a3a',
     logo_url: 'logo.png',
-    banners: []
+    banners: [],
+    payment_gateway: 'mercadopago',
+    pagarme_api_key: ''
 };
 
 async function loadSettings() {
@@ -530,6 +535,10 @@ async function loadSettings() {
     document.getElementById('setWhatsapp').value = storeSettings.whatsapp_number || '';
     document.getElementById('setPrimaryColor').value = storeSettings.primary_color || '#1e2a3a';
     document.getElementById('colorHexDisplay').textContent = storeSettings.primary_color || '#1e2a3a';
+    document.getElementById('setPaymentGateway').value = storeSettings.payment_gateway || 'mercadopago';
+    document.getElementById('setPagarmeApiKey').value = storeSettings.pagarme_api_key || '';
+
+    togglePagarmeKeyVisibility(storeSettings.payment_gateway);
 
     if (storeSettings.logo_url) {
         document.getElementById('logoPreview').src = storeSettings.logo_url;
@@ -537,6 +546,17 @@ async function loadSettings() {
 
     renderAdminBanners();
 }
+
+function togglePagarmeKeyVisibility(gateway) {
+    const group = document.getElementById('groupPagarmeKey');
+    if (group) {
+        group.style.display = gateway === 'pagarme' ? 'block' : 'none';
+    }
+}
+
+document.getElementById('setPaymentGateway').addEventListener('change', (e) => {
+    togglePagarmeKeyVisibility(e.target.value);
+});
 
 document.getElementById('setPrimaryColor').addEventListener('input', (e) => {
     document.getElementById('colorHexDisplay').textContent = e.target.value;
@@ -639,6 +659,8 @@ document.getElementById('formSettings').addEventListener('submit', async (e) => 
 
     storeSettings.whatsapp_number = document.getElementById('setWhatsapp').value.replace(/\D/g, '');
     storeSettings.primary_color = document.getElementById('setPrimaryColor').value;
+    storeSettings.payment_gateway = document.getElementById('setPaymentGateway').value;
+    storeSettings.pagarme_api_key = document.getElementById('setPagarmeApiKey').value;
 
     try {
         const { error } = await window.supabaseClient
@@ -647,7 +669,9 @@ document.getElementById('formSettings').addEventListener('submit', async (e) => 
                 whatsapp_number: storeSettings.whatsapp_number,
                 primary_color: storeSettings.primary_color,
                 logo_url: storeSettings.logo_url,
-                banners: storeSettings.banners
+                banners: storeSettings.banners,
+                payment_gateway: storeSettings.payment_gateway,
+                pagarme_api_key: storeSettings.pagarme_api_key
             })
             .eq('id', 1);
 
@@ -1288,3 +1312,277 @@ function initMobileSidebar() {
         });
     }
 }
+
+// ── SALES REPORTS MANAGEMENT ──────────────────────────
+async function loadSalesReport() {
+    showToast('⏳ Carregando vendas...');
+    try {
+        const response = await fetch(`/api/sales-report?password=${encodeURIComponent(CONFIG.adminPassword)}`);
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Falha ao carregar vendas');
+        }
+        const data = await response.json();
+        sales = data.sales || [];
+        renderSalesReport();
+    } catch (err) {
+        console.error('Erro ao carregar relatório:', err);
+        showToast('❌ Erro: ' + err.message);
+    }
+}
+
+function renderSalesReport(list = null) {
+    const tbody = document.getElementById('reportsTbody');
+    const empty = document.getElementById('emptyReports');
+    if (!tbody) return;
+
+    const dataToRender = list !== null ? list : sales;
+    updateReportStats(dataToRender);
+
+    if (dataToRender.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = dataToRender.map(s => {
+        return `
+            <tr>
+                <td>
+                    <div style="font-weight: 500;">${formatDate(s.date)}</div>
+                    <div style="font-size: 0.75rem; color: #999;">ID: ${s.id}</div>
+                </td>
+                <td>
+                    <div style="font-weight: 500;">${s.customerName}</div>
+                    <div style="font-size: 0.75rem; color: #666;">${s.customerPhone}</div>
+                </td>
+                <td>
+                    <div class="td-title">${s.productName}</div>
+                    <div class="td-desc">REF: #${s.reference}</div>
+                </td>
+                <td style="font-weight: 600;">R$ ${parseFloat(s.amount).toFixed(2).replace('.', ',')}</td>
+                <td>
+                    <span style="font-size: 0.85rem; font-weight: 500;">
+                        ${getPaymentMethodText(s.paymentMethod)}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge ${getStatusBadgeClass(s.status)}">
+                        ${getStatusText(s.status)}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-primary btn-sm" onclick="viewSaleDetails('${s.id}')" style="padding: 4px 8px; font-size: 0.8rem;">
+                        Detalhes
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+window.filterReports = function() {
+    const q = (document.getElementById('searchReports')?.value || '').toLowerCase().trim();
+    const statusFilter = document.getElementById('filterReportStatus')?.value || 'all';
+    const startDateVal = document.getElementById('filterReportStartDate')?.value || '';
+    const endDateVal = document.getElementById('filterReportEndDate')?.value || '';
+
+    const filtered = sales.filter(s => {
+        const matchSearch = !q || 
+            s.customerName.toLowerCase().includes(q) || 
+            s.customerPhone.includes(q) || 
+            s.productName.toLowerCase().includes(q) || 
+            s.id.toString().includes(q) || 
+            s.reference.toLowerCase().includes(q);
+
+        let matchStatus = true;
+        if (statusFilter === 'approved') {
+            matchStatus = s.status === 'approved';
+        } else if (statusFilter === 'pending') {
+            matchStatus = s.status === 'pending' || s.status === 'in_process';
+        } else if (statusFilter === 'rejected') {
+            matchStatus = s.status === 'rejected' || s.status === 'cancelled';
+        }
+
+        let matchDate = true;
+        if (s.date) {
+            const saleDate = new Date(s.date);
+            if (startDateVal) {
+                const startDate = new Date(startDateVal + 'T00:00:00');
+                if (saleDate < startDate) matchDate = false;
+            }
+            if (endDateVal) {
+                const endDate = new Date(endDateVal + 'T23:59:59');
+                if (saleDate > endDate) matchDate = false;
+            }
+        } else if (startDateVal || endDateVal) {
+            matchDate = false;
+        }
+
+        return matchSearch && matchStatus && matchDate;
+    });
+
+    renderSalesReport(filtered);
+};
+
+function updateReportStats(list) {
+    let totalApproved = 0;
+    let approvedCount = 0;
+    let totalPending = 0;
+
+    list.forEach(s => {
+        const amt = parseFloat(s.amount) || 0;
+        if (s.status === 'approved') {
+            totalApproved += amt;
+            approvedCount++;
+        } else if (s.status === 'pending' || s.status === 'in_process') {
+            totalPending += amt;
+        }
+    });
+
+    document.getElementById('statTotalApproved').textContent = 'R$ ' + totalApproved.toFixed(2).replace('.', ',');
+    document.getElementById('statTotalCount').textContent = approvedCount.toString();
+    document.getElementById('statTotalPending').textContent = 'R$ ' + totalPending.toFixed(2).replace('.', ',');
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    } catch {
+        return dateStr;
+    }
+}
+
+function getStatusBadgeClass(status) {
+    switch (status) {
+        case 'approved': return 'badge-approved';
+        case 'pending':
+        case 'in_process': return 'badge-pending';
+        case 'rejected':
+        case 'cancelled': return 'badge-rejected';
+        default: return 'badge-neutral';
+    }
+}
+
+function getStatusText(status) {
+    switch (status) {
+        case 'approved': return 'Aprovado';
+        case 'pending': return 'Pendente';
+        case 'in_process': return 'Em Análise';
+        case 'rejected': return 'Rejeitado';
+        case 'cancelled': return 'Cancelado';
+        default: return status || 'Outro';
+    }
+}
+
+function getPaymentMethodText(method) {
+    if (!method) return 'Não informado';
+    const m = method.toLowerCase();
+    switch (m) {
+        case 'account_money': return 'Saldo Mercado Pago';
+        case 'pix': return 'PIX';
+        case 'credit_card': return 'Cartão de Crédito';
+        case 'debit_card': return 'Cartão de Débito';
+        case 'ticket':
+        case 'bolbradesco': return 'Boleto Bancário';
+        default: return method.toUpperCase();
+    }
+}
+
+window.viewSaleDetails = function(id) {
+    const sale = sales.find(s => s.id == id);
+    if (!sale) return;
+
+    const modal = document.getElementById('saleDetailsModal');
+    document.getElementById('invoiceRef').textContent = `ID MP: ${sale.id} | REF: ${sale.reference}`;
+
+    const infoHtml = `
+        <div class="invoice-section">
+            <h4>Dados do Cliente</h4>
+            <p><strong>Nome:</strong> ${sale.customerName}</p>
+            <p><strong>E-mail:</strong> ${sale.customerEmail}</p>
+            <p><strong>Telefone:</strong> ${sale.customerPhone}</p>
+        </div>
+        <hr class="invoice-divider">
+        <div class="invoice-section">
+            <h4>Detalhes da Compra</h4>
+            <p><strong>Produto:</strong> ${sale.productName}</p>
+            <p><strong>Valor:</strong> R$ ${parseFloat(sale.amount).toFixed(2).replace('.', ',')}</p>
+            <p><strong>Forma de Pagamento:</strong> ${getPaymentMethodText(sale.paymentMethod)}</p>
+            <p><strong>Data/Hora:</strong> ${formatDate(sale.date)}</p>
+            <p><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(sale.status)}">${getStatusText(sale.status)}</span></p>
+        </div>
+        <hr class="invoice-divider">
+        <div class="invoice-section">
+            <h4>Entrega / Observações</h4>
+            <p>${sale.deliveryInfo || 'Não informado'}</p>
+        </div>
+    `;
+
+    document.getElementById('invoiceContent').innerHTML = infoHtml;
+    modal.style.display = 'flex';
+};
+
+window.closeSaleDetailsModal = function() {
+    document.getElementById('saleDetailsModal').style.display = 'none';
+};
+
+window.printInvoice = function() {
+    document.body.classList.add('printing-invoice');
+    window.print();
+    setTimeout(() => {
+        document.body.classList.remove('printing-invoice');
+    }, 500);
+};
+
+window.printReports = function() {
+    window.print();
+};
+
+window.exportReportsToExcel = function() {
+    if (sales.length === 0) {
+        showToast('⚠️ Nenhuma venda disponível para exportar.');
+        return;
+    }
+
+    try {
+        showToast('⏳ Gerando planilha Excel...');
+        const rows = sales.map(s => ({
+            'ID Transação': s.id,
+            'Data/Hora': formatDate(s.date),
+            'Cliente': s.customerName,
+            'Telefone': s.customerPhone,
+            'E-mail': s.customerEmail,
+            'Produto': s.productName,
+            'Valor (R$)': parseFloat(s.amount),
+            'Forma de Pagamento': getPaymentMethodText(s.paymentMethod),
+            'Status': getStatusText(s.status),
+            'Referência': s.reference,
+            'Entrega / Observações': s.deliveryInfo
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(rows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Vendas');
+
+        // Autowidth columns
+        const maxLens = {};
+        rows.forEach(row => {
+            Object.keys(row).forEach(key => {
+                const valStr = (row[key] || '').toString();
+                maxLens[key] = Math.max(maxLens[key] || 10, valStr.length);
+            });
+        });
+        worksheet['!cols'] = Object.keys(maxLens).map(key => ({ wch: maxLens[key] + 3 }));
+
+        XLSX.writeFile(workbook, `Relatorio_Vendas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        showToast('✅ Planilha gerada com sucesso!');
+    } catch (err) {
+        console.error('Erro ao exportar Excel:', err);
+        showToast('❌ Falha ao exportar Excel: ' + err.message);
+    }
+};

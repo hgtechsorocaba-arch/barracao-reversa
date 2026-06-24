@@ -481,6 +481,26 @@ function showCheckoutForm() {
     if (detailsView) detailsView.style.display = 'none';
     if (formView) formView.style.display = 'block';
 
+    const qtyInput = document.getElementById('purchaseQty');
+    if (qtyInput) {
+        qtyInput.value = 1;
+        qtyInput.max = currentProduct.stock || 1;
+    }
+    const maxLabel = document.getElementById('stockMaxLabel');
+    if (maxLabel) {
+        maxLabel.textContent = `(${currentProduct.stock || 0} disponíveis)`;
+    }
+
+    updateCheckoutTotalPrice();
+}
+
+function updateCheckoutTotalPrice() {
+    const qtyInput = document.getElementById('purchaseQty');
+    if (!qtyInput || !currentProduct) return;
+
+    const qty = parseInt(qtyInput.value, 10) || 1;
+    const totalPrice = parseFloat(currentProduct.price) * qty;
+
     const varSummary = Object.entries(selectedVariations).map(([k, v]) => `${k}: ${v}`).join(' · ');
 
     const summaryEl = document.getElementById('checkoutSummary');
@@ -491,7 +511,10 @@ function showCheckoutForm() {
                 <div>
                     <div style="font-weight:700; font-size:1rem; color:#333;">${currentProduct.name}</div>
                     <div style="font-size:0.85rem; color:#666; margin:4px 0;">${varSummary}</div>
-                    <div style="color:#1e88e5; font-weight:800; font-size:1.1rem;">R$ ${parseFloat(currentProduct.price).toFixed(2).replace('.', ',')}</div>
+                    <div style="color:#1e88e5; font-weight:800; font-size:1.1rem;">
+                        ${qty > 1 ? `${qty}x R$ ${parseFloat(currentProduct.price).toFixed(2).replace('.', ',')} = ` : ''}
+                        R$ ${totalPrice.toFixed(2).replace('.', ',')}
+                    </div>
                 </div>
             </div>
         `;
@@ -530,10 +553,14 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
         ? ` (${Object.entries(selectedVariations).map(([k, v]) => `${k}: ${v}`).join(', ')})`
         : '';
 
+    const qtyInput = document.getElementById('purchaseQty');
+    const qtyVal = qtyInput ? parseInt(qtyInput.value, 10) : 1;
+
     const payload = {
         productId: currentProduct.id,
         productName: currentProduct.name + varText,
         price: currentProduct.price,
+        quantity: qtyVal,
         customerName: name,
         customerEmail: email,
         customerPhone: phone,
@@ -588,6 +615,34 @@ if (searchInp) searchInp.addEventListener('input', applyFilters);
 const catSel = document.getElementById('categorySelect');
 if (catSel) catSel.addEventListener('change', applyFilters);
 
+// ── QUANTITY SELECTOR EVENTS ──────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const btnMinus = document.getElementById('btnQtyMinus');
+    const btnPlus = document.getElementById('btnQtyPlus');
+    const qtyInput = document.getElementById('purchaseQty');
+
+    if (btnMinus && btnPlus && qtyInput) {
+        btnMinus.addEventListener('click', () => {
+            let val = parseInt(qtyInput.value, 10) || 1;
+            if (val > 1) {
+                qtyInput.value = val - 1;
+                updateCheckoutTotalPrice();
+            }
+        });
+
+        btnPlus.addEventListener('click', () => {
+            let val = parseInt(qtyInput.value, 10) || 1;
+            const max = parseInt(qtyInput.max, 10) || 1;
+            if (val < max) {
+                qtyInput.value = val + 1;
+                updateCheckoutTotalPrice();
+            } else {
+                showToast(`⚠️ Apenas ${max} itens disponíveis em estoque.`);
+            }
+        });
+    }
+});
+
 // ── PHONE MASK ────────────────────────────────────────
 const phoneInp = document.getElementById('userPhone');
 if (phoneInp) {
@@ -614,7 +669,7 @@ async function applyStoreSettings() {
     try {
         const { data, error } = await window.supabaseClient
             .from('store_settings')
-            .select('*')
+            .select('whatsapp_number, primary_color, logo_url, banners, payment_gateway')
             .eq('id', 1)
             .single();
 
@@ -665,6 +720,60 @@ async function applyStoreSettings() {
                 // Add margins around hero to make space for banners if we keep both
                 const hero = document.querySelector('.hero');
                 if (hero) hero.style.display = 'none'; // hide hero if there are banners? Or show both. Let's hide the big hero if there are custom banners, because banners are usually intended as a replacement for the hero real estate.
+
+                // Autoplay and manual scroll tracking
+                const slides = slider.querySelectorAll('.banner-slide');
+                if (slides.length > 1) {
+                    let currentSlide = 0;
+                    let slideInterval = null;
+                    let scrollTimeout = null;
+
+                    const startAutoplay = () => {
+                        if (slideInterval) clearInterval(slideInterval);
+                        slideInterval = setInterval(() => {
+                            currentSlide = (currentSlide + 1) % slides.length;
+                            const targetScroll = slides[currentSlide].offsetLeft - slider.offsetLeft;
+                            slider.scrollTo({ left: targetScroll, behavior: 'smooth' });
+                        }, 5000); // Passa a cada 5 segundos
+                    };
+
+                    const handleScroll = () => {
+                        // Pause autoplay on manual scroll
+                        if (slideInterval) {
+                            clearInterval(slideInterval);
+                            slideInterval = null;
+                        }
+
+                        // Calculate current slide index based on closest offset
+                        const scrollLeft = slider.scrollLeft;
+                        let closestIndex = 0;
+                        let minDiff = Infinity;
+
+                        slides.forEach((slide, idx) => {
+                            const slideOffset = slide.offsetLeft - slider.offsetLeft;
+                            const diff = Math.abs(scrollLeft - slideOffset);
+                            if (diff < minDiff) {
+                                minDiff = diff;
+                                closestIndex = idx;
+                            }
+                        });
+
+                        currentSlide = closestIndex;
+
+                        // Resume autoplay after 5 seconds of inactivity
+                        clearTimeout(scrollTimeout);
+                        scrollTimeout = setTimeout(startAutoplay, 5000);
+                    };
+
+                    const adjustScroll = () => {
+                        const targetScroll = slides[currentSlide].offsetLeft - slider.offsetLeft;
+                        slider.scrollTo({ left: targetScroll, behavior: 'auto' });
+                    };
+
+                    slider.addEventListener('scroll', handleScroll);
+                    window.addEventListener('resize', adjustScroll);
+                    startAutoplay();
+                }
             }
         }
 
