@@ -186,24 +186,22 @@ a {
 .banner-slide {
   flex: 0 0 100%;
   scroll-snap-align: start;
-  border-radius: var(--radius);
-  overflow: hidden;
-  aspect-ratio: 3 / 1;
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  background: transparent;
+  height: auto;
 }
 
 .banner-img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   display: block;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
   .banner-slide {
-    aspect-ratio: 16 / 9;
-    /* Mais quadrado no mobile */
+    height: auto;
   }
 }
 
