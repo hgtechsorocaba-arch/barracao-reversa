@@ -669,7 +669,7 @@ async function applyStoreSettings() {
     try {
         const { data, error } = await window.supabaseClient
             .from('store_settings')
-            .select('whatsapp_number, primary_color, logo_url, banners, payment_gateway')
+            .select('whatsapp_number, primary_color, logo_url, banners')
             .eq('id', 1)
             .single();
 
