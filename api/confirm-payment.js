@@ -58,7 +58,7 @@ module.exports = async function handler(req, res) {
             const quantity = parseInt(metadata.quantidade || item.quantity || 1, 10);
             
             // Dar baixa no estoque do produto no Supabase
-            const productId = metadata.produto_id || item.id;
+            const productId = metadata.produto_id || item.code || item.id;
             if (productId && productId !== 'avulso' && productId !== 'produto') {
                 try {
                     await decrementProductStock(productId, quantity, supabaseUrl, supabaseKey);
@@ -68,7 +68,11 @@ module.exports = async function handler(req, res) {
             }
             
             let name = metadata.cliente_nome || order.customer?.name || 'Não informado';
-            let phone = metadata.telefone || order.customer?.phones?.mobile_phone?.number || 'Não informado';
+            let phone = metadata.telefone || 'Não informado';
+            if (phone === 'Não informado' && order.customer?.phones?.mobile_phone) {
+                const mp = order.customer.phones.mobile_phone;
+                phone = mp.area_code ? `(${mp.area_code}) ${mp.number}` : mp.number;
+            }
             let email = order.customer?.email || 'Não informado';
 
             const unitPrice = parseFloat(metadata.valor_unitario || (price / quantity) || 0);

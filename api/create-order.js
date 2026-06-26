@@ -84,7 +84,8 @@ module.exports = async function handler(req, res) {
                     items: [{
                         name: productName.slice(0, 256),
                         amount: Math.round(parseFloat(price) * 100), // Preço unitário em centavos
-                        default_quantity: quantity ? parseInt(quantity, 10) : 1
+                        default_quantity: quantity ? parseInt(quantity, 10) : 1,
+                        code: productId || 'avulso'
                     }]
                 },
                 payment_settings: {
@@ -96,6 +97,10 @@ module.exports = async function handler(req, res) {
                     pix_settings: {
                         expires_in: 1440 // 24 horas em minutos
                     }
+                },
+                checkout_settings: {
+                    success_url: `${baseUrl}/?pedido=confirmado&gateway=pagarme&external_reference=${externalRef}`,
+                    skip_checkout_success_page: true
                 },
                 metadata: {
                     cliente_nome: customerName,
