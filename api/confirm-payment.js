@@ -145,7 +145,13 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ 
                 success: true, 
                 message: 'Payment not approved, ignoring event', 
-                status: payment ? payment.status : 'unknown' 
+                status: payment ? payment.status : 'unknown',
+                debug: {
+                    bodyType: typeof req.body,
+                    bodyKeys: req.body ? Object.keys(req.body) : [],
+                    body: req.body,
+                    headers: req.headers
+                }
             });
         }
 
