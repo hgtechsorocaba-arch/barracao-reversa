@@ -605,17 +605,29 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
         .then(res => res.json())
         .then(data => {
             if (data.checkoutUrl) {
-                // Se for Pagar.me, salvar dados do pedido para verificar quando o cliente voltar
+                // Salvar dados do pedido para verificar pagamento
                 if (data.orderId) {
                     localStorage.setItem('pendingPagarmeOrder', JSON.stringify({
                         orderId: data.orderId,
                         productName: currentProduct.name,
                         productId: currentProduct.id,
                         quantity: qtyVal,
+                        checkoutUrl: data.checkoutUrl,
                         timestamp: Date.now()
                     }));
                 }
-                window.location.href = data.checkoutUrl;
+
+                // Fechar modal de checkout
+                closeCheckout();
+
+                // Abrir checkout do Pagar.me em nova aba e mostrar polling na página atual
+                if (data.orderId) {
+                    window.open(data.checkoutUrl, '_blank');
+                    showPollingOverlay(data.orderId, data.checkoutUrl);
+                } else {
+                    // Fallback: redirecionar se não tiver orderId (ex: MercadoPago)
+                    window.location.href = data.checkoutUrl;
+                }
             } else {
                 showToast('❌ Erro ao gerar link de pagamento: ' + (data.error || 'Desconhecido'));
                 if (btn) {
@@ -899,20 +911,43 @@ async function init() {
 
     const urlParams = new URLSearchParams(window.location.search);
 
-    // Check order confirmation (Mercado Pago redireciona com ?pedido=confirmado)
+    // Check order confirmation (Pagar.me ou Mercado Pago redireciona com ?pedido=confirmado)
     const pedido = urlParams.get('pedido');
     if (pedido === 'confirmado') {
         const paymentId = urlParams.get('payment_id') || '';
         const externalRef = urlParams.get('external_reference') || '';
         
-        // Limpar dados do pedido pendente Pagar.me do localStorage para evitar reexibição
-        localStorage.removeItem('pendingPagarmeOrder');
+        // Limpa parâmetros da URL imediatamente para evitar reexibição no refresh
+        window.history.replaceState({}, document.title, window.location.pathname);
 
-        setTimeout(() => {
-            showPaymentConfirmationModal(paymentId, externalRef);
-            // Limpa parâmetros da URL para evitar reexibição do modal no refresh
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }, 500);
+        // Determinar o ID do pedido para verificar
+        const pendingOrder = JSON.parse(localStorage.getItem('pendingPagarmeOrder') || 'null');
+        const orderIdToCheck = pendingOrder?.orderId || paymentId || externalRef;
+
+        if (orderIdToCheck) {
+            // VERIFICAR com o servidor se o pagamento foi realmente processado
+            fetch(`/api/check-payment?paymentId=${orderIdToCheck}`)
+                .then(res => res.json())
+                .then(statusData => {
+                    if (statusData && statusData.processed) {
+                        // Pagamento REALMENTE confirmado pelo servidor
+                        localStorage.removeItem('pendingPagarmeOrder');
+                        showPaymentConfirmationModal(orderIdToCheck, externalRef);
+                    } else {
+                        // Webhook ainda não chegou - mostrar tela de polling para aguardar
+                        const checkoutUrl = pendingOrder?.checkoutUrl || '';
+                        showPollingOverlay(orderIdToCheck, checkoutUrl);
+                    }
+                })
+                .catch(() => {
+                    // Em caso de erro na verificação, mostrar polling
+                    const checkoutUrl = pendingOrder?.checkoutUrl || '';
+                    showPollingOverlay(orderIdToCheck, checkoutUrl);
+                });
+        } else {
+            // Sem ID para verificar - limpar dados stale
+            localStorage.removeItem('pendingPagarmeOrder');
+        }
     }
 
     // Check pending orders (cliente voltou ao site após pagar)
