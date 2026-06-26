@@ -352,7 +352,7 @@ a {
 .how-section {
   padding: 60px 20px;
   background: var(--bg);
-  max-width: 900px;
+  max-width: 1600px;
   margin: 0 auto;
 }
 
@@ -380,7 +380,7 @@ a {
   text-align: center;
   flex: 1;
   min-width: 200px;
-  max-width: 250px;
+  max-width: 380px;
   position: relative;
   transition: transform .25s, border-color .25s;
 }
