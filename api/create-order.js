@@ -85,7 +85,8 @@ module.exports = async function handler(req, res) {
                         name: productName.slice(0, 256),
                         amount: Math.round(parseFloat(price) * 100), // Preço unitário em centavos
                         default_quantity: quantity ? parseInt(quantity, 10) : 1,
-                        code: productId || 'avulso'
+                        code: productId || 'avulso',
+                        reference_id: productId || 'avulso'
                     }]
                 },
                 payment_settings: {

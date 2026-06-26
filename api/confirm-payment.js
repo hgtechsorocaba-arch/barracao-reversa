@@ -50,6 +50,13 @@ module.exports = async function handler(req, res) {
             }
             console.log(`Pagamento Pagar.me ${paymentId} marcado como processado (primeira vez).`);
 
+            // Marcar também o ID do link de pagamento para que o frontend possa consultar
+            const paymentLinkId = order.metadata?.payment_link_id || order.integration?.code;
+            if (paymentLinkId) {
+                console.log(`Marcando link de pagamento ${paymentLinkId} como processado.`);
+                await tryMarkPaymentAsProcessed(paymentLinkId, supabaseUrl, supabaseKey);
+            }
+
             // Extrair informações do pagamento
             const metadata = order.metadata || {};
             const item = order.items?.[0] || {};
@@ -58,7 +65,7 @@ module.exports = async function handler(req, res) {
             const quantity = parseInt(metadata.quantidade || item.quantity || 1, 10);
             
             // Dar baixa no estoque do produto no Supabase
-            const productId = metadata.produto_id || item.code || item.id;
+            const productId = metadata.produto_id || item.code || item.reference_id || item.id;
             if (productId && productId !== 'avulso' && productId !== 'produto') {
                 try {
                     await decrementProductStock(productId, quantity, supabaseUrl, supabaseKey);

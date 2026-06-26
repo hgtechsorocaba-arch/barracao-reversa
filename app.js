@@ -603,8 +603,8 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
         .then(res => res.json())
         .then(data => {
             if (data.checkoutUrl) {
-                // Se for Pagar.me, salvar dados do pedido para verificar quando o cliente voltar
-                if (data.orderId) {
+                const isPagarme = data.checkoutUrl.includes('pagar.me');
+                if (isPagarme && data.orderId) {
                     localStorage.setItem('pendingPagarmeOrder', JSON.stringify({
                         orderId: data.orderId,
                         productName: currentProduct.name,
@@ -612,8 +612,15 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
                         quantity: qtyVal,
                         timestamp: Date.now()
                     }));
+                    window.open(data.checkoutUrl, '_blank');
+                    showPollingOverlay(data.orderId, data.checkoutUrl);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = 'Finalizar Compra';
+                    }
+                } else {
+                    window.location.href = data.checkoutUrl;
                 }
-                window.location.href = data.checkoutUrl;
             } else {
                 showToast('❌ Erro ao gerar link de pagamento: ' + (data.error || 'Desconhecido'));
                 if (btn) {
@@ -922,10 +929,17 @@ async function init() {
                 if (ageMs > 24 * 60 * 60 * 1000) {
                     localStorage.removeItem('pendingPagarmeOrder');
                 } else {
-                    localStorage.removeItem('pendingPagarmeOrder');
-                    setTimeout(() => {
-                        showPaymentConfirmationModal(pendingOrder.orderId, '');
-                    }, 800);
+                    fetch(`/api/check-payment?paymentId=${pendingOrder.orderId}`)
+                        .then(res => res.json())
+                        .then(statusData => {
+                            if (statusData && statusData.processed) {
+                                localStorage.removeItem('pendingPagarmeOrder');
+                                setTimeout(() => {
+                                    showPaymentConfirmationModal(pendingOrder.orderId, '');
+                                }, 800);
+                            }
+                        })
+                        .catch(err => console.error('Erro ao checar pagamento pendente no init:', err));
                 }
             }
         } catch (e) {
@@ -1084,3 +1098,79 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+let pollingIntervalId = null;
+
+function showPollingOverlay(orderId, checkoutUrl) {
+    // Se o overlay já existir, remover
+    const existing = document.getElementById('pollingOverlayWrapper');
+    if (existing) existing.remove();
+
+    const overlayHtml = `
+        <div class="modal-overlay active" id="pollingOverlay" style="display: flex; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; backdrop-filter: blur(8px);">
+            <div class="modal-box" style="background: #0d0d0d; border: 1px solid #FFD600; padding: 40px 30px; border-radius: 12px; max-width: 450px; width: 90%; text-align: center; color: #fff; box-shadow: 0 0 30px rgba(255, 214, 0, 0.25);">
+                <!-- Spinner de carregamento -->
+                <div class="spinner-container" style="margin-bottom: 25px; position: relative; display: flex; justify-content: center;">
+                    <div style="width: 60px; height: 60px; border: 4px solid rgba(255,214,0,0.1); border-top: 4px solid #FFD600; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                </div>
+                <h3 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 12px; color: #fff; text-transform: uppercase; letter-spacing: 1px;">Aguardando Pagamento...</h3>
+                <p style="color: #ccc; font-size: 0.95rem; line-height: 1.6; margin-bottom: 25px;">
+                    Abrimos a tela de pagamento do Pagar.me em uma nova aba.<br>
+                    Realize o pagamento por Pix ou Cartão lá e esta página será confirmada automaticamente em seguida.
+                </p>
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #222; text-align: center;">
+                    <a href="${checkoutUrl}" target="_blank" style="color: #FFD600; font-weight: 700; text-decoration: underline; font-size: 0.9rem;">
+                        Não abriu a tela? Clique aqui para pagar
+                    </a>
+                </div>
+                <button type="button" onclick="cancelPolling()" style="padding: 10px 20px; background: transparent; color: #ff5555; border: 1px solid #ff5555; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                    Cancelar Compra
+                </button>
+            </div>
+        </div>
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+
+    const div = document.createElement('div');
+    div.id = 'pollingOverlayWrapper';
+    div.innerHTML = overlayHtml;
+    document.body.appendChild(div);
+    document.body.style.overflow = 'hidden';
+
+    // Inicia o loop de consulta (polling)
+    if (pollingIntervalId) clearInterval(pollingIntervalId);
+    pollingIntervalId = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/check-payment?paymentId=${orderId}`);
+            const statusData = await res.json();
+            if (statusData && statusData.processed) {
+                // Pagamento confirmado!
+                clearInterval(pollingIntervalId);
+                pollingIntervalId = null;
+                div.remove();
+                document.body.style.overflow = '';
+                localStorage.removeItem('pendingPagarmeOrder');
+                showPaymentConfirmationModal(orderId, '');
+            }
+        } catch (e) {
+            console.error('Erro na checagem de pagamento:', e);
+        }
+    }, 3000);
+}
+
+window.cancelPolling = function() {
+    if (pollingIntervalId) {
+        clearInterval(pollingIntervalId);
+        pollingIntervalId = null;
+    }
+    const wrapper = document.getElementById('pollingOverlayWrapper');
+    if (wrapper) wrapper.remove();
+    document.body.style.overflow = '';
+    localStorage.removeItem('pendingPagarmeOrder');
+    showToast('⚠️ Compra cancelada pelo usuário.');
+};
