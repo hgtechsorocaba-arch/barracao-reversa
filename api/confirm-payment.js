@@ -20,14 +20,20 @@ module.exports = async function handler(req, res) {
     const supabaseKey = 'sb_publishable_lo4UybgUFxCbAKVbT-Pkzw_8JEipiqT';
 
     // 1. Detectar se é Webhook do Pagar.me (Stone)
-    const isPagarMe = !!req.body.event;
+    const eventType = req.body.event || req.body.type;
+    const isPagarMe = !!(eventType && (
+        eventType.startsWith('order.') || 
+        eventType.startsWith('charge.') || 
+        eventType.startsWith('subscription.') ||
+        (req.body.data && req.body.data.id && req.body.data.id.startsWith('or_'))
+    ));
 
     if (isPagarMe) {
-        console.log(`Recebido webhook do Pagar.me. Evento: ${req.body.event}`);
+        console.log(`Recebido webhook do Pagar.me. Evento: ${eventType}`);
         
-        if (req.body.event !== 'order.paid') {
-            console.log(`Ignorando evento Pagar.me irrelevante: ${req.body.event}`);
-            return res.status(200).json({ success: true, message: `Evento ${req.body.event} ignorado.` });
+        if (eventType !== 'order.paid') {
+            console.log(`Ignorando evento Pagar.me irrelevante: ${eventType}`);
+            return res.status(200).json({ success: true, message: `Evento ${eventType} ignorado.` });
         }
 
         const order = req.body.data;
@@ -145,13 +151,7 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ 
                 success: true, 
                 message: 'Payment not approved, ignoring event', 
-                status: payment ? payment.status : 'unknown',
-                debug: {
-                    bodyType: typeof req.body,
-                    bodyKeys: req.body ? Object.keys(req.body) : [],
-                    body: req.body,
-                    headers: req.headers
-                }
+                status: payment ? payment.status : 'unknown'
             });
         }
 

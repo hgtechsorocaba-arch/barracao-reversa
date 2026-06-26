@@ -77,30 +77,33 @@ module.exports = async function handler(req, res) {
             }));
 
             const pagarmePayload = {
-                type: 'order',
-                name: productName.slice(0, 256),
-                order_code: externalRef,
-                success_url: `${baseUrl}/?pedido=confirmado&gateway=pagarme&external_reference=${externalRef}`,
-                skip_checkout_success_page: true,
-                cart_settings: {
-                    items: [{
-                        name: productName.slice(0, 256),
-                        amount: Math.round(parseFloat(price) * 100), // Preço unitário em centavos
-                        default_quantity: quantity ? parseInt(quantity, 10) : 1,
-                        code: productId || 'avulso',
-                        reference_id: productId || 'avulso'
-                    }]
+                code: externalRef,
+                items: [{
+                    amount: Math.round(parseFloat(price) * 100), // Preço unitário em centavos
+                    description: productName.slice(0, 256),
+                    quantity: quantity ? parseInt(quantity, 10) : 1,
+                    code: productId || 'avulso'
+                }],
+                customer: {
+                    name: customerName,
+                    email: customerEmail
                 },
-                payment_settings: {
-                    accepted_payment_methods: ['pix', 'credit_card'],
-                    credit_card_settings: {
-                        operation_type: 'auth_and_capture',
-                        installments: installments
-                    },
-                    pix_settings: {
-                        expires_in: 1440 // 24 horas em minutos
+                payments: [{
+                    payment_method: 'checkout',
+                    checkout: {
+                        success_url: `${baseUrl}/?pedido=confirmado&gateway=pagarme&external_reference=${externalRef}`,
+                        skip_checkout_success_page: true,
+                        customer_editable: true,
+                        accepted_payment_methods: ['pix', 'credit_card'],
+                        credit_card: {
+                            capture: true,
+                            installments: installments
+                        },
+                        pix: {
+                            expires_in: 86400 // 24 horas em segundos
+                        }
                     }
-                },
+                }],
                 metadata: {
                     cliente_nome: customerName,
                     produto_id: productId || 'avulso',
@@ -113,11 +116,13 @@ module.exports = async function handler(req, res) {
                 }
             };
 
-            console.log('Enviando payload para Pagar.me...', JSON.stringify(pagarmePayload));
-            const pagarmeResponse = await callPagarMe('/paymentlinks', 'POST', pagarmePayload, pagarmeApiKey);
+            console.log('Enviando payload de Pedido para Pagar.me...', JSON.stringify(pagarmePayload));
+            const pagarmeResponse = await callPagarMe('/orders', 'POST', pagarmePayload, pagarmeApiKey);
 
-            if (!pagarmeResponse.url) {
-                console.error('Erro na resposta do Pagar.me:', JSON.stringify(pagarmeResponse, null, 2));
+            const checkoutObj = pagarmeResponse.checkouts?.[0];
+
+            if (!checkoutObj || !checkoutObj.payment_url) {
+                console.error('Erro na resposta de Pedido do Pagar.me:', JSON.stringify(pagarmeResponse, null, 2));
                 return res.status(502).json({
                     error: 'Não foi possível gerar o link de pagamento na Stone/Pagar.me',
                     details: pagarmeResponse,
@@ -127,7 +132,7 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({
                 success: true,
                 orderId: pagarmeResponse.id,
-                checkoutUrl: pagarmeResponse.url,
+                checkoutUrl: checkoutObj.payment_url,
             });
         }
 
