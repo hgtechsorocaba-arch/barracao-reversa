@@ -147,8 +147,9 @@ function renderProducts(list) {
     empty.style.display = 'none';
 
     grid.innerHTML = list.map(p => {
-        const sl = stockLabel(p.stock ?? 99);
-        const sold = (p.stock ?? 99) === 0;
+        const rawStock = (p.stock !== null && p.stock !== undefined && p.stock !== '') ? Number(p.stock) : 0;
+        const sl = stockLabel(rawStock);
+        const sold = rawStock <= 0;
 
         // Carousel photos
         const photos = p.images && p.images.length > 0 ? p.images : [p.image];
@@ -332,6 +333,12 @@ function openCheckout(id) {
     const p = (typeof allProducts !== 'undefined' ? allProducts : products).find(item => item.id === id);
     if (!p) return;
 
+    const stockVal = (p.stock !== null && p.stock !== undefined && p.stock !== '') ? Number(p.stock) : 0;
+    if (stockVal <= 0) {
+        showToast('⚠️ Este produto está esgotado no momento.');
+        return;
+    }
+
     currentProduct = p;
     selectedVariations = {};
 
@@ -467,6 +474,13 @@ window.selectVariation = function (el, attr, val) {
 };
 
 function showCheckoutForm() {
+    if (!currentProduct) return;
+    const stockVal = (currentProduct.stock !== null && currentProduct.stock !== undefined && currentProduct.stock !== '') ? Number(currentProduct.stock) : 0;
+    if (stockVal <= 0) {
+        showToast('⚠️ Este produto está esgotado no momento.');
+        return;
+    }
+
     if (currentProduct.variations && currentProduct.variations.length > 0) {
         const missing = currentProduct.variations.find(v => !selectedVariations[v.name]);
         if (missing) {
@@ -531,6 +545,20 @@ function closeCheckout() {
 document.getElementById('checkoutForm').addEventListener('submit', function (e) {
     e.preventDefault();
 
+    if (!currentProduct) return;
+    const stockVal = (currentProduct.stock !== null && currentProduct.stock !== undefined && currentProduct.stock !== '') ? Number(currentProduct.stock) : 0;
+    if (stockVal <= 0) {
+        showToast('❌ Erro: O produto esgotou.');
+        return;
+    }
+
+    const qtyInput = document.getElementById('purchaseQty');
+    const qtyVal = qtyInput ? parseInt(qtyInput.value, 10) : 1;
+    if (qtyVal > stockVal) {
+        showToast(`❌ Erro: Apenas ${stockVal} unidades disponíveis em estoque.`);
+        return;
+    }
+
     const name = document.getElementById('userName').value.trim();
     const phone = document.getElementById('userPhone').value.trim();
 
@@ -552,9 +580,6 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
     const varText = Object.entries(selectedVariations).length > 0
         ? ` (${Object.entries(selectedVariations).map(([k, v]) => `${k}: ${v}`).join(', ')})`
         : '';
-
-    const qtyInput = document.getElementById('purchaseQty');
-    const qtyVal = qtyInput ? parseInt(qtyInput.value, 10) : 1;
 
     const payload = {
         productId: currentProduct.id,

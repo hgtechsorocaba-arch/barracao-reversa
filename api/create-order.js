@@ -44,6 +44,19 @@ module.exports = async function handler(req, res) {
         const storeSettings = await getStoreSettings(supabaseUrl, supabaseKey);
         const gateway = storeSettings?.payment_gateway || 'mercadopago';
 
+        // 1.5. Consultar estoque do produto para garantir disponibilidade
+        if (productId && productId !== 'avulso') {
+            const product = await getProduct(productId, supabaseUrl, supabaseKey);
+            if (!product) {
+                return res.status(404).json({ error: 'Produto não encontrado' });
+            }
+            const currentStock = (product.stock !== null && product.stock !== undefined && product.stock !== '') ? parseInt(product.stock, 10) : 0;
+            const requestedQty = quantity ? parseInt(quantity, 10) : 1;
+            if (currentStock <= 0 || requestedQty > currentStock || isNaN(currentStock)) {
+                return res.status(400).json({ error: `Desculpe, este produto está esgotado (estoque: ${currentStock || 0}).` });
+            }
+        }
+
         console.log(`Utilizando gateway de pagamento: ${gateway}`);
 
         // 2. Se for Pagar.me (Stone)
@@ -57,8 +70,10 @@ module.exports = async function handler(req, res) {
             const totalAmountCents = Math.round(parseFloat(price) * (quantity ? parseInt(quantity, 10) : 1) * 100);
 
             // Geramos a lista de opções de parcelas (1 a 12x)
+            // O campo 'total' é obrigatório pela API do Pagar.me
             const installments = Array.from({ length: 12 }, (_, i) => ({
-                number: i + 1
+                number: i + 1,
+                total: totalAmountCents
             }));
 
             const pagarmePayload = {
@@ -193,6 +208,40 @@ module.exports = async function handler(req, res) {
         return res.status(500).json({ error: 'Erro interno', details: err.message });
     }
 };
+
+// Obter produto do Supabase
+function getProduct(productId, supabaseUrl, supabaseKey) {
+    return new Promise((resolve) => {
+        const url = `${supabaseUrl}/rest/v1/products?id=eq.${encodeURIComponent(productId)}`;
+        const options = {
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json'
+            }
+        };
+
+        https.get(url, options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const result = JSON.parse(data);
+                    if (Array.isArray(result) && result.length > 0) {
+                        resolve(result[0]);
+                    } else {
+                        resolve(null);
+                    }
+                } catch {
+                    resolve(null);
+                }
+            });
+        }).on('error', (err) => {
+            console.error('Erro ao carregar produto do Supabase:', err);
+            resolve(null);
+        });
+    });
+}
 
 // Obter configurações do Supabase
 function getStoreSettings(supabaseUrl, supabaseKey) {

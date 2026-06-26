@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajustador de Banners - Barracão Reversa</title>
+    <style>
+        :root {
+            --primary: #FFD600;
+            --bg: #0d0d0d;
+            --surface: #1e1e1e;
+            --text: #ffffff;
+            --text-mute: #a0a0a0;
+            --radius: 12px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--surface);
+            padding: 30px;
+            border-radius: var(--radius);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin-top: 0;
+            font-size: 24px;
+        }
+
+        p {
+            color: var(--text-mute);
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--primary);
+            padding: 40px 20px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 25px;
+        }
+
+        .upload-area:hover {
+            background: rgba(255, 214, 0, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .preview-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .canvas-wrapper {
+            max-width: 100%;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .btn-download {
+            background-color: var(--primary);
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .btn-download:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        .btn-download:active {
+            transform: scale(0.98);
+        }
+
+        .info-box {
+            margin-top: 25px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .info-box ul {
+            margin: 5px 0 0 20px;
+            padding: 0;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+            color: var(--text-mute);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🛠️ Ajustador de Proporção do Banner 1</h1>
+        <p>
+            O seu Banner 1 foi criado na proporção <strong>3:2 (1536x1024px)</strong>, enquanto o Banner 2 está em <strong>2:1 (1774x887px)</strong>.
+            Esta ferramenta adiciona preenchimento amarelo nas laterais e estende o rodapé preto automaticamente para criar uma imagem perfeita de proporção <strong>2:1 (2048x1024px)</strong> sem distorcer ou cortar suas informações.
+        </p>
+
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">📁</div>
+            <div style="font-weight: bold;">Clique aqui para selecionar o Banner 1</div>
+            <div style="font-size: 12px; color: var(--text-mute); margin-top: 5px;">(Selecione o arquivo do Banner 1 no seu computador)</div>
+            <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp">
+        </div>
+
+        <div class="preview-container" id="previewContainer">
+            <h3 style="color: var(--primary); margin-bottom: 15px;">Pré-visualização do Banner Ajustado (2:1):</h3>
+            <div class="canvas-wrapper">
+                <canvas id="outputCanvas"></canvas>
+            </div>
+            <button class="btn-download" id="btnDownload">⬇️ Baixar Banner Ajustado</button>
+        </div>
+
+        <div class="info-box">
+            <strong style="color: var(--primary);">Próximos passos após baixar a imagem:</strong>
+            <ul>
+                <li>Acesse o seu Painel Admin da loja.</li>
+                <li>Na seção de Banners, <strong>remova</strong> o Banner 1 antigo.</li>
+                <li>Faça o upload do novo arquivo baixado (com o preenchimento lateral).</li>
+                <li>Clique em <strong>Salvar Configurações</strong> no final da página.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const canvas = document.getElementById('outputCanvas');
+        const ctx = canvas.getContext('2d');
+        const btnDownload = document.getElementById('btnDownload');
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    processImage(img);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function processImage(img) {
+            // Original dimensions
+            const origW = img.width;
+            const origH = img.height;
+
+            // Target aspect ratio is 2:1.
+            // We keep the height same as original, so new width = 2 * height
+            const newH = origH;
+            const newW = origH * 2;
+
+            canvas.width = newW;
+            canvas.height = newH;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, newW, newH);
+
+            // Draw original image centered
+            const startX = (newW - origW) / 2;
+            ctx.drawImage(img, startX, 0, origW, origH);
+
+            // Get image data to analyze colors
+            // We sample the image column just inside the original image bounds (e.g. 20px inside the left boundary of drawn image)
+            const sampleX = Math.round(startX + 20);
+            
+            // Temporary small canvas to read pixels easily
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 1;
+            tempCanvas.height = origH;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(img, 20, 0, 1, origH, 0, 0, 1, origH);
+            const imgData = tempCtx.getImageData(0, 0, 1, origH).data;
+
+            // Detect yellow color (near top) and black footer color (near bottom)
+            // Yellow: high R & G, low B
+            // Footer: very low R, G, B
+            let yellowR = 255, yellowG = 214, yellowB = 0; // fallback default
+            let footerR = 13, footerG = 13, footerB = 13; // fallback default
+            
+            // Sample yellow from Y = 100
+            const idxYellow = 100 * 4;
+            if (idxYellow < imgData.length) {
+                yellowR = imgData[idxYellow];
+                yellowG = imgData[idxYellow + 1];
+                yellowB = imgData[idxYellow + 2];
+            }
+
+            // Sample footer from Y = H - 20
+            const idxFooter = (origH - 20) * 4;
+            if (idxFooter < imgData.length) {
+                footerR = imgData[idxFooter];
+                footerG = imgData[idxFooter + 1];
+                footerB = imgData[idxFooter + 2];
+            }
+
+            // Find transition boundary from yellow to footer (moving bottom-up or top-down)
+            // Let's scan from top to bottom.
+            // We look for where the brightness drops significantly and stays low.
+            let boundaryY = Math.round(origH * 0.9); // default fallback at 90% height
+            
+            for (let y = 0; y < origH; y++) {
+                const idx = y * 4;
+                const r = imgData[idx];
+                const g = imgData[idx + 1];
+                const b = imgData[idx + 2];
+                
+                // Let's compute luminance
+                const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+                
+                // If luminance is very low (e.g., < 45) and we are in the lower 25% of the image
+                if (y > origH * 0.75 && lum < 45) {
+                    boundaryY = y;
+                    break;
+                }
+            }
+
+            // Fill left and right margins
+            const yellowColorStr = `rgb(${yellowR}, ${yellowG}, ${yellowB})`;
+            const footerColorStr = `rgb(${footerR}, ${footerG}, ${footerB})`;
+
+            // Left Margin
+            ctx.fillStyle = yellowColorStr;
+            ctx.fillRect(0, 0, startX + 1, boundaryY); // add +1 to overlap and prevent seam lines
+            ctx.fillStyle = footerColorStr;
+            ctx.fillRect(0, boundaryY, startX + 1, newH - boundaryY);
+
+            // Right Margin
+            ctx.fillStyle = yellowColorStr;
+            ctx.fillRect(startX + origW - 1, 0, startX + 1, boundaryY);
+            ctx.fillStyle = footerColorStr;
+            ctx.fillRect(startX + origW - 1, boundaryY, startX + 1, newH - boundaryY);
+
+            // Redraw image once again over the margins to make sure edges are clean
+            ctx.drawImage(img, startX, 0, origW, origH);
+
+            // Show preview
+            previewContainer.style.display = 'block';
+        }
+
+        btnDownload.addEventListener('click', function() {
+            const dataUrl = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'banner_1_ajustado.png';
+            link.href = dataUrl;
+            link.click();
+        });
+    </script>
+</body>
+</html>

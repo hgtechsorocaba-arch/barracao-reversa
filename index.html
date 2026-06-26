@@ -169,6 +169,16 @@
 
                 <h2 class="modal-title">Finalizar Pedido</h2>
                 <form id="checkoutForm">
+                    <div class="form-group" id="qtyGroup">
+                        <label>Quantidade *</label>
+                        <div class="quantity-selector" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <button type="button" class="btn-qty" id="btnQtyMinus" style="width: 38px; height: 38px; border: 1px solid #ccc; background: #fff; border-radius: 6px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #333;">-</button>
+                            <input type="number" id="purchaseQty" value="1" min="1" readonly style="width: 60px; height: 38px; text-align: center; border: 1px solid #ccc; border-radius: 6px; font-size: 1.1rem; font-weight: 700; background: #f9f9f9; color: #333;">
+                            <button type="button" class="btn-qty" id="btnQtyPlus" style="width: 38px; height: 38px; border: 1px solid #ccc; background: #fff; border-radius: 6px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #333;">+</button>
+                            <span id="stockMaxLabel" style="font-size: 0.85rem; color: #888; margin-left: 8px;"></span>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label for="userName">Seu Nome Completo *</label>
                         <input type="text" id="userName" placeholder="Ex: João Silva" required>
@@ -194,7 +204,7 @@
 
                     <div class="payment-info-box">
                         <div class="pix-label">💰 Pagamento Seguro</div>
-                        <p>O pagamento será processado de forma segura pelo Mercado Pago.</p>
+                        <p>O pagamento será processado de forma segura pela Stone/Pagar.me.</p>
                     </div>
 
                     <button type="submit" class="btn-confirm-order" id="btnConfirmOrder">

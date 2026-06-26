@@ -1586,3 +1586,159 @@ window.exportReportsToExcel = function() {
         showToast('❌ Falha ao exportar Excel: ' + err.message);
     }
 };
+
+// ==========================================
+// BANNER ASPECT RATIO ADJUSTMENT (3:2 -> 2:1)
+// ==========================================
+window.openAdjustBannerModal = function() {
+    document.getElementById('adjustBannerModal').style.display = 'flex';
+    document.getElementById('adjustBannerInput').value = '';
+    document.getElementById('adjustPreviewContainer').style.display = 'none';
+    document.getElementById('btnDownloadAdjustedBanner').style.display = 'none';
+    document.getElementById('btnApplyAdjustedBanner').style.display = 'none';
+};
+
+window.closeAdjustBannerModal = function() {
+    document.getElementById('adjustBannerModal').style.display = 'none';
+};
+
+document.getElementById('adjustBannerInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+            processAdjustImage(img);
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+});
+
+function processAdjustImage(img) {
+    const canvas = document.getElementById('adjustCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const origW = img.width;
+    const origH = img.height;
+
+    // Target aspect ratio is 2:1.
+    // We keep the height same as original, so new width = 2 * height
+    const newH = origH;
+    const newW = origH * 2;
+
+    canvas.width = newW;
+    canvas.height = newH;
+
+    ctx.clearRect(0, 0, newW, newH);
+
+    // Draw original image centered
+    const startX = (newW - origW) / 2;
+    ctx.drawImage(img, startX, 0, origW, origH);
+
+    // Analyze colors by drawing 1px slice on a temp canvas
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = 1;
+    tempCanvas.height = origH;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(img, 20, 0, 1, origH, 0, 0, 1, origH);
+    const imgData = tempCtx.getImageData(0, 0, 1, origH).data;
+
+    let yellowR = 255, yellowG = 214, yellowB = 0;
+    let footerR = 13, footerG = 13, footerB = 13;
+
+    // Sample yellow (Y = 100)
+    const idxYellow = 100 * 4;
+    if (idxYellow < imgData.length) {
+        yellowR = imgData[idxYellow];
+        yellowG = imgData[idxYellow + 1];
+        yellowB = imgData[idxYellow + 2];
+    }
+
+    // Sample footer (Y = H - 20)
+    const idxFooter = (origH - 20) * 4;
+    if (idxFooter < imgData.length) {
+        footerR = imgData[idxFooter];
+        footerG = imgData[idxFooter + 1];
+        footerB = imgData[idxFooter + 2];
+    }
+
+    // Find boundary where luminance drops
+    let boundaryY = Math.round(origH * 0.9);
+    for (let y = 0; y < origH; y++) {
+        const idx = y * 4;
+        const r = imgData[idx];
+        const g = imgData[idx + 1];
+        const b = imgData[idx + 2];
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        
+        if (y > origH * 0.75 && lum < 45) {
+            boundaryY = y;
+            break;
+        }
+    }
+
+    const yellowColorStr = `rgb(${yellowR}, ${yellowG}, ${yellowB})`;
+    const footerColorStr = `rgb(${footerR}, ${footerG}, ${footerB})`;
+
+    // Fill margins
+    ctx.fillStyle = yellowColorStr;
+    ctx.fillRect(0, 0, startX + 1, boundaryY);
+    ctx.fillStyle = footerColorStr;
+    ctx.fillRect(0, boundaryY, startX + 1, newH - boundaryY);
+
+    ctx.fillStyle = yellowColorStr;
+    ctx.fillRect(startX + origW - 1, 0, startX + 1, boundaryY);
+    ctx.fillStyle = footerColorStr;
+    ctx.fillRect(startX + origW - 1, boundaryY, startX + 1, newH - boundaryY);
+
+    // Redraw original centered image to clean edges
+    ctx.drawImage(img, startX, 0, origW, origH);
+
+    // Show preview & buttons
+    document.getElementById('adjustPreviewContainer').style.display = 'block';
+    document.getElementById('btnDownloadAdjustedBanner').style.display = 'inline-block';
+    document.getElementById('btnApplyAdjustedBanner').style.display = 'inline-block';
+}
+
+window.downloadAdjustedBanner = function() {
+    const canvas = document.getElementById('adjustCanvas');
+    const dataUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = 'banner_1_ajustado.png';
+    link.href = dataUrl;
+    link.click();
+};
+
+window.applyAdjustedBanner = function() {
+    if (!window.supabaseClient) {
+        showToast('❌ Supabase não conectado');
+        return;
+    }
+
+    if (!storeSettings.banners) storeSettings.banners = [];
+    if (storeSettings.banners.length >= 5) {
+        showToast('Maximo 5 banners atingido.');
+        return;
+    }
+
+    const canvas = document.getElementById('adjustCanvas');
+    
+    showToast('⏳ Fazendo upload do banner ajustado...');
+    
+    canvas.toBlob(async function(blob) {
+        try {
+            const file = new File([blob], 'banner_ajustado.png', { type: 'image/png' });
+            const publicUrl = await uploadToSupabaseBucket(file);
+            storeSettings.banners.push(publicUrl);
+            renderAdminBanners();
+            closeAdjustBannerModal();
+            showToast('✅ Banner adicionado! Clique em Salvar Configurações no final para confirmar.');
+        } catch (err) {
+            showToast('❌ Erro no upload: ' + (err.message || 'Falha desconhecida'));
+            console.error(err);
+        }
+    }, 'image/png');
+};

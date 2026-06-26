@@ -364,6 +364,8 @@
 
                             <button type="button" class="btn-secondary btn-sm mt-3" id="btnAddBanner"
                                 onclick="document.getElementById('bannerInput').click()">+ Adicionar Banner</button>
+                            <button type="button" class="btn-secondary btn-sm mt-3" id="btnOpenAdjustModal"
+                                onclick="openAdjustBannerModal()" style="margin-left: 8px; border: 1px dashed var(--primary); color: var(--primary); background: transparent;">🔧 Ajustar Banner (3:2 ➔ 2:1)</button>
                             <input type="file" id="bannerInput" accept="image/png, image/jpeg, image/webp" hidden>
                         </div>
                     </div>
@@ -616,6 +618,37 @@
                 
                 <div id="invoiceContent" class="invoice-content">
                     <!-- Preenchido via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: AJUSTAR BANNER -->
+        <div class="modal-overlay" id="adjustBannerModal" style="display:none; z-index:1000;">
+            <div class="modal-box" style="max-width: 600px; width: 90%;">
+                <button class="modal-close-btn" onclick="closeAdjustBannerModal()">✕</button>
+                <h2 style="margin-bottom:10px; font-size: 20px;">🔧 Ajustar Proporção do Banner (3:2 ➔ 2:1)</h2>
+                <p class="color-mute" style="font-size:13px; margin-bottom:20px; line-height: 1.5;">
+                    Esta ferramenta adiciona preenchimento amarelo nas laterais e estende o rodapé preto automaticamente para criar um banner perfeito na proporção <strong>2:1</strong> sem distorcer ou cortar a imagem original.
+                </p>
+                
+                <div class="upload-area" onclick="document.getElementById('adjustBannerInput').click()" style="border: 2px dashed var(--primary, #FFD600); padding: 30px 15px; border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.02); margin-bottom: 20px;">
+                    <div style="font-size: 30px; margin-bottom: 8px;">📁</div>
+                    <div style="font-weight: bold; font-size: 14px;">Clique aqui para selecionar o Banner 1 (3:2)</div>
+                    <div style="font-size: 11px; color: var(--text-mute, #a0a0a0); margin-top: 4px;">(PNG, JPG, WEBP)</div>
+                    <input type="file" id="adjustBannerInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
+                </div>
+
+                <div id="adjustPreviewContainer" style="display:none; text-align:center; margin-bottom:20px;">
+                    <h4 style="margin-bottom:10px; color:var(--primary, #FFD600); font-size: 14px;">Pré-visualização do Banner Ajustado:</h4>
+                    <div style="max-width:100%; border-radius:8px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.3); background: #000;">
+                        <canvas id="adjustCanvas" style="display:block; width:100%; height:auto;"></canvas>
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="display:flex; gap:10px; justify-content:flex-end; margin-top: 20px;">
+                    <button class="btn-secondary" onclick="closeAdjustBannerModal()">Cancelar</button>
+                    <button class="btn-secondary" id="btnDownloadAdjustedBanner" onclick="downloadAdjustedBanner()" style="display:none; background: transparent; border: 1px solid #555;">⬇️ Baixar Imagem</button>
+                    <button class="btn-primary" id="btnApplyAdjustedBanner" onclick="applyAdjustedBanner()" style="display:none;">✅ Salvar e Adicionar</button>
                 </div>
             </div>
         </div>
