@@ -603,8 +603,8 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
         .then(res => res.json())
         .then(data => {
             if (data.checkoutUrl) {
-                const isPagarme = data.checkoutUrl.includes('pagar.me');
-                if (isPagarme && data.orderId) {
+                // Se for Pagar.me, salvar dados do pedido para verificar quando o cliente voltar
+                if (data.orderId) {
                     localStorage.setItem('pendingPagarmeOrder', JSON.stringify({
                         orderId: data.orderId,
                         productName: currentProduct.name,
@@ -612,15 +612,8 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
                         quantity: qtyVal,
                         timestamp: Date.now()
                     }));
-                    window.open(data.checkoutUrl, '_blank');
-                    showPollingOverlay(data.orderId, data.checkoutUrl);
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.innerText = 'Finalizar Compra';
-                    }
-                } else {
-                    window.location.href = data.checkoutUrl;
                 }
+                window.location.href = data.checkoutUrl;
             } else {
                 showToast('❌ Erro ao gerar link de pagamento: ' + (data.error || 'Desconhecido'));
                 if (btn) {

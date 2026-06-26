@@ -80,6 +80,8 @@ module.exports = async function handler(req, res) {
                 type: 'order',
                 name: productName.slice(0, 256),
                 order_code: externalRef,
+                success_url: `${baseUrl}/?pedido=confirmado&gateway=pagarme&external_reference=${externalRef}`,
+                skip_checkout_success_page: true,
                 cart_settings: {
                     items: [{
                         name: productName.slice(0, 256),
@@ -98,10 +100,6 @@ module.exports = async function handler(req, res) {
                     pix_settings: {
                         expires_in: 1440 // 24 horas em minutos
                     }
-                },
-                checkout_settings: {
-                    success_url: `${baseUrl}/?pedido=confirmado&gateway=pagarme&external_reference=${externalRef}`,
-                    skip_checkout_success_page: true
                 },
                 metadata: {
                     cliente_nome: customerName,
