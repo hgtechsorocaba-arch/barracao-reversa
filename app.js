@@ -603,6 +603,16 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
         .then(res => res.json())
         .then(data => {
             if (data.checkoutUrl) {
+                // Se for Pagar.me, salvar dados do pedido para verificar quando o cliente voltar
+                if (data.orderId) {
+                    localStorage.setItem('pendingPagarmeOrder', JSON.stringify({
+                        orderId: data.orderId,
+                        productName: currentProduct.name,
+                        productId: currentProduct.id,
+                        quantity: qtyVal,
+                        timestamp: Date.now()
+                    }));
+                }
                 window.location.href = data.checkoutUrl;
             } else {
                 showToast('❌ Erro ao gerar link de pagamento: ' + (data.error || 'Desconhecido'));
@@ -836,7 +846,7 @@ function showPaymentConfirmationModal(paymentId, externalRef) {
                 <div style="font-size: 3.5rem; color: #FFD600; margin-bottom: 15px; filter: drop-shadow(0 0 8px rgba(255,214,0,0.4));">🎉</div>
                 <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 10px; color: #fff; text-transform: uppercase; letter-spacing: 1px;">Pagamento Confirmado!</h2>
                 <p style="color: #bbb; font-size: 0.95rem; line-height: 1.5; margin-bottom: 20px;">
-                    Seu pagamento foi recebido com sucesso pelo Mercado Pago!
+                    Seu pagamento foi recebido com sucesso!
                 </p>
                 <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 25px; text-align: left; font-size: 0.85rem; border: 1px solid #222; color: #ccc;">
                     ${paymentId ? `<div style="margin-bottom: 4px;"><strong>ID da Transação:</strong> ${paymentId}</div>` : ''}
@@ -867,10 +877,10 @@ window.closeSuccessPaymentModal = function() {
 
 window.sendSuccessWppMessage = function(paymentId, externalRef) {
     const whatsappNum = CONFIG.whatsappNumber || '5515996966956';
-    let text = `Olá Everton! Acabei de realizar o pagamento do meu pedido pelo site via Mercado Pago.\n\n`;
+    let text = `Olá! Acabei de realizar o pagamento do meu pedido pelo site.\n\n`;
     if (paymentId) text += `*ID da Transação:* ${paymentId}\n`;
     if (externalRef) text += `*Referência do Pedido:* ${externalRef}\n`;
-    text += `\nGostaria de combinar os detalhes para a retirada do produto!`;
+    text += `\nGostaria de confirmar os detalhes do pedido!`;
     
     const wppUrl = `https://wa.me/${whatsappNum}?text=${encodeURIComponent(text)}`;
     window.open(wppUrl, '_blank');
@@ -887,7 +897,7 @@ async function init() {
 
     const urlParams = new URLSearchParams(window.location.search);
 
-    // Check order confirmation
+    // Check order confirmation (Mercado Pago redireciona com ?pedido=confirmado)
     const pedido = urlParams.get('pedido');
     if (pedido === 'confirmado') {
         const paymentId = urlParams.get('payment_id') || '';
@@ -901,6 +911,26 @@ async function init() {
             // Limpa parâmetros da URL para evitar reexibição do modal no refresh
             window.history.replaceState({}, document.title, window.location.pathname);
         }, 500);
+    }
+
+    // Check pending Pagar.me orders (cliente voltou ao site após pagar no Pagar.me)
+    if (!pedido) {
+        try {
+            const pendingOrder = JSON.parse(localStorage.getItem('pendingPagarmeOrder'));
+            if (pendingOrder && pendingOrder.orderId) {
+                const ageMs = Date.now() - (pendingOrder.timestamp || 0);
+                if (ageMs > 24 * 60 * 60 * 1000) {
+                    localStorage.removeItem('pendingPagarmeOrder');
+                } else {
+                    localStorage.removeItem('pendingPagarmeOrder');
+                    setTimeout(() => {
+                        showPaymentConfirmationModal(pendingOrder.orderId, '');
+                    }, 800);
+                }
+            }
+        } catch (e) {
+            localStorage.removeItem('pendingPagarmeOrder');
+        }
     }
 
     // Check custom URLs
