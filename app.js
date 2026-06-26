@@ -903,8 +903,8 @@ async function init() {
         const paymentId = urlParams.get('payment_id') || '';
         const externalRef = urlParams.get('external_reference') || '';
         
-        // A notificação é disparada automaticamente pelo webhook do Mercado Pago (notification_url)
-        // Não precisamos chamar /api/confirm-payment aqui para evitar duplicidade
+        // Limpar dados do pedido pendente Pagar.me do localStorage para evitar reexibição
+        localStorage.removeItem('pendingPagarmeOrder');
 
         setTimeout(() => {
             showPaymentConfirmationModal(paymentId, externalRef);
