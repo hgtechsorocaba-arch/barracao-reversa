@@ -595,8 +595,10 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
         address: ''
     };
 
-    // Abrir janela AGORA (síncrono, no clique do usuário) para evitar bloqueio de popup
-    const checkoutWindow = window.open('about:blank', '_blank');
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // Abrir janela em branco síncrona no desktop para evitar popup blocker
+    const checkoutWindow = !isMobile ? window.open('about:blank', '_blank') : null;
 
     fetch('/api/create-order', {
         method: 'POST',
@@ -623,21 +625,20 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
                 // Fechar modal de checkout
                 closeCheckout();
 
-                // Redirecionar a janela que já foi aberta para o checkout
-                if (checkoutWindow && !checkoutWindow.closed) {
-                    checkoutWindow.location.href = data.checkoutUrl;
-                } else {
-                    // Popup foi bloqueado - abrir na mesma aba como fallback
-                    window.open(data.checkoutUrl, '_blank');
-                }
-
-                // Mostrar polling overlay na página atual
-                if (data.orderId) {
-                    showPollingOverlay(data.orderId, data.checkoutUrl);
-                } else {
-                    // MercadoPago: redirecionar
-                    if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
+                if (isMobile) {
+                    // No mobile, sempre redireciona na mesma aba
                     window.location.href = data.checkoutUrl;
+                } else {
+                    // No desktop, tenta usar a aba aberta
+                    if (checkoutWindow && !checkoutWindow.closed) {
+                        checkoutWindow.location.href = data.checkoutUrl;
+                        if (data.orderId) {
+                            showPollingOverlay(data.orderId, data.checkoutUrl);
+                        }
+                    } else {
+                        // Popup bloqueado ou fechado - redireciona a própria aba
+                        window.location.href = data.checkoutUrl;
+                    }
                 }
             } else {
                 // Fechar a janela em branco se houve erro
