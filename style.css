@@ -75,7 +75,7 @@ a {
 }
 
 .header-inner {
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 0 20px;
   height: 64px;
@@ -166,7 +166,7 @@ a {
 
 /* ── BANNERS SLIDER ───────────────────────── */
 .banner-slider {
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 80px auto 0;
   padding: 0 20px;
   display: flex;
@@ -434,7 +434,7 @@ a {
 /* ── PRODUCTS SECTION ────────────────────── */
 .products-section {
   padding: 40px 20px 80px;
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
 }
 
@@ -491,7 +491,7 @@ a {
 /* ── PRODUCT GRID ─────────────────────────── */
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 20px;
 }
 
@@ -1649,7 +1649,7 @@ select option {
 
 .modal-overlay.full-view .modal {
   width: 100% !important;
-  max-width: 1200px !important;
+  max-width: 1600px !important;
   margin: 110px auto 40px;
   box-shadow: none;
   min-height: auto;
