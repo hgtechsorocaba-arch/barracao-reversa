@@ -232,7 +232,10 @@ function renderProducts(list) {
             const productUrl = `${baseUrl}/api/share?id=${p.id}`;
             const shareText = `*${p.name}*\n\n*Preço:* ${formatPrice(p.price)}\n*Pagamento:* via PIX\n\n_Barracão Reversa - Qualidade e Segurança_\n\n*COMPRAR:*\n${productUrl}`;
 
-            if (navigator.share) {
+            // Só usar navigator.share se for celular/tablet (no desktop o menu nativo do Windows não tem WhatsApp Web)
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile && navigator.share) {
                 try {
                     await navigator.share({
                         title: p.name,
@@ -244,8 +247,8 @@ function renderProducts(list) {
                 }
             }
 
-            // Fallback: abre o WhatsApp com texto + link
-            const wppUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+            // No desktop (ou fallback), abre o link do WhatsApp Web direto
+            const wppUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
             window.open(wppUrl, '_blank');
         });
     });
