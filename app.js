@@ -595,6 +595,9 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
         address: ''
     };
 
+    // Abrir janela AGORA (síncrono, no clique do usuário) para evitar bloqueio de popup
+    const checkoutWindow = window.open('about:blank', '_blank');
+
     fetch('/api/create-order', {
         method: 'POST',
         headers: {
@@ -620,15 +623,25 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
                 // Fechar modal de checkout
                 closeCheckout();
 
-                // Abrir checkout do Pagar.me em nova aba e mostrar polling na página atual
-                if (data.orderId) {
+                // Redirecionar a janela que já foi aberta para o checkout
+                if (checkoutWindow && !checkoutWindow.closed) {
+                    checkoutWindow.location.href = data.checkoutUrl;
+                } else {
+                    // Popup foi bloqueado - abrir na mesma aba como fallback
                     window.open(data.checkoutUrl, '_blank');
+                }
+
+                // Mostrar polling overlay na página atual
+                if (data.orderId) {
                     showPollingOverlay(data.orderId, data.checkoutUrl);
                 } else {
-                    // Fallback: redirecionar se não tiver orderId (ex: MercadoPago)
+                    // MercadoPago: redirecionar
+                    if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
                     window.location.href = data.checkoutUrl;
                 }
             } else {
+                // Fechar a janela em branco se houve erro
+                if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
                 showToast('❌ Erro ao gerar link de pagamento: ' + (data.error || 'Desconhecido'));
                 if (btn) {
                     btn.disabled = false;
@@ -637,6 +650,8 @@ document.getElementById('checkoutForm').addEventListener('submit', function (e) 
             }
         })
         .catch(err => {
+            // Fechar a janela em branco se houve erro
+            if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
             console.error('Erro no checkout:', err);
             showToast('❌ Ocorreu um erro. Tente novamente.');
             if (btn) {
