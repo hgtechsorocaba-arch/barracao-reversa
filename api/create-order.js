@@ -92,7 +92,7 @@ module.exports = async function handler(req, res) {
                     payment_method: 'checkout',
                     checkout: {
                         success_url: `${baseUrl}/?pedido=confirmado&gateway=pagarme&external_reference=${externalRef}`,
-                        skip_checkout_success_page: false,
+                        skip_checkout_success_page: true,
                         customer_editable: true,
                         accepted_payment_methods: ['pix', 'credit_card'],
                         credit_card: {

@@ -57,7 +57,7 @@ module.exports = async function handler(req, res) {
             console.log(`Pagamento Pagar.me ${paymentId} marcado como processado (primeira vez).`);
 
             // Marcar também o ID do link de pagamento para que o frontend possa consultar
-            const paymentLinkId = order.metadata?.payment_link_id || order.integration?.code;
+            const paymentLinkId = order.metadata?.payment_link_id || order.integration?.code || order.code;
             if (paymentLinkId) {
                 console.log(`Marcando link de pagamento ${paymentLinkId} como processado.`);
                 await tryMarkPaymentAsProcessed(paymentLinkId, supabaseUrl, supabaseKey);
@@ -165,6 +165,13 @@ module.exports = async function handler(req, res) {
             });
         }
         console.log(`Pagamento ${paymentId} marcado como processado (primeira vez).`);
+
+        // Marcar também a referência externa como processada para o frontend poder consultar
+        const extRef = payment.external_reference || externalRef;
+        if (extRef) {
+            console.log(`Marcando também a referência externa ${extRef} como processada.`);
+            await tryMarkPaymentAsProcessed(extRef, supabaseUrl, supabaseKey);
+        }
 
         // Extrair informações do pagamento
         const item = payment.additional_info?.items?.[0] || {};

@@ -913,31 +913,9 @@ async function init() {
         }, 500);
     }
 
-    // Check pending Pagar.me orders (cliente voltou ao site após pagar no Pagar.me)
+    // Check pending orders (cliente voltou ao site após pagar)
     if (!pedido) {
-        try {
-            const pendingOrder = JSON.parse(localStorage.getItem('pendingPagarmeOrder'));
-            if (pendingOrder && pendingOrder.orderId) {
-                const ageMs = Date.now() - (pendingOrder.timestamp || 0);
-                if (ageMs > 24 * 60 * 60 * 1000) {
-                    localStorage.removeItem('pendingPagarmeOrder');
-                } else {
-                    fetch(`/api/check-payment?paymentId=${pendingOrder.orderId}`)
-                        .then(res => res.json())
-                        .then(statusData => {
-                            if (statusData && statusData.processed) {
-                                localStorage.removeItem('pendingPagarmeOrder');
-                                setTimeout(() => {
-                                    showPaymentConfirmationModal(pendingOrder.orderId, '');
-                                }, 800);
-                            }
-                        })
-                        .catch(err => console.error('Erro ao checar pagamento pendente no init:', err));
-                }
-            }
-        } catch (e) {
-            localStorage.removeItem('pendingPagarmeOrder');
-        }
+        checkPendingOrder();
     }
 
     // Check custom URLs
@@ -949,6 +927,43 @@ async function init() {
         }, 500);
     }
 }
+
+// Verifica se há pedidos pendentes e consulta o status no banco de dados
+window.checkPendingOrder = function() {
+    try {
+        const pendingOrder = JSON.parse(localStorage.getItem('pendingPagarmeOrder'));
+        if (pendingOrder && pendingOrder.orderId) {
+            const ageMs = Date.now() - (pendingOrder.timestamp || 0);
+            if (ageMs > 24 * 60 * 60 * 1000) {
+                localStorage.removeItem('pendingPagarmeOrder');
+            } else {
+                fetch(`/api/check-payment?paymentId=${pendingOrder.orderId}`)
+                    .then(res => res.json())
+                    .then(statusData => {
+                        if (statusData && statusData.processed) {
+                            localStorage.removeItem('pendingPagarmeOrder');
+                            setTimeout(() => {
+                                showPaymentConfirmationModal(pendingOrder.orderId, '');
+                            }, 500);
+                        }
+                    })
+                    .catch(err => console.error('Erro ao checar pagamento pendente:', err));
+            }
+        }
+    } catch (e) {
+        localStorage.removeItem('pendingPagarmeOrder');
+    }
+};
+
+// Monitora eventos para reexibir a confirmação se o cliente voltar ou atualizar a aba
+window.addEventListener('pageshow', function(event) {
+    checkPendingOrder();
+});
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+        checkPendingOrder();
+    }
+});
 
 init();
 
