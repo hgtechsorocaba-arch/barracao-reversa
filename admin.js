@@ -1851,47 +1851,27 @@ window.closeAbandonedCartsModal = function() {
     document.getElementById('abandonedCartsModal').style.display = 'none';
 };
 
-window.sendAbandonedCartMessage = async function(phone, customerName, productName, reference, amount, btnElement) {
-    if (!confirm(`Deseja enviar a mensagem de resgate via ZapLink para ${customerName}?`)) {
-        return;
+window.sendAbandonedCartMessage = function(phone, customerName, productName, reference, amount, btnElement) {
+    // Limpar o telefone para conter apenas números
+    let cleanPhone = String(phone).replace(/\D/g, '');
+    
+    // Adicionar 55 se o número for local (10 ou 11 dígitos)
+    if (cleanPhone.length === 10 || cleanPhone.length === 11) {
+        cleanPhone = '55' + cleanPhone;
     }
 
-    const originalText = btnElement.innerHTML;
-    btnElement.innerHTML = 'Enviando...';
-    btnElement.disabled = true;
+    const firstName = (customerName || 'Cliente').split(' ')[0];
+    
+    const message = `Olá *${firstName}*! Aqui é da Barracão Reversa.\n\nVimos que você tentou comprar o produto *${productName}* mas o pedido não foi concluído.\n\nPosso ajudar com alguma dúvida para você garantir o seu?`;
+    
+    const encodedMessage = encodeURIComponent(message);
+    const waLink = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
 
-    try {
-        const response = await fetch('/api/send-zaplink-abandoned', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                phone,
-                customerName,
-                productName,
-                reference,
-                amount,
-                adminPassword: CONFIG.adminPassword
-            })
-        });
+    // Atualizar UI do botão para indicar que já foi clicado
+    btnElement.innerHTML = '✅ Aberto no Web';
+    btnElement.style.backgroundColor = '#666';
+    btnElement.style.borderColor = '#666';
 
-        const result = await response.json();
-
-        if (response.ok && result.success) {
-            showToast('✅ Mensagem de resgate enviada com sucesso!');
-            btnElement.innerHTML = '✅ Enviado';
-            btnElement.style.backgroundColor = '#666';
-            btnElement.style.borderColor = '#666';
-        } else {
-            showToast('❌ Erro ao enviar: ' + (result.error || 'Desconhecido'));
-            btnElement.innerHTML = originalText;
-            btnElement.disabled = false;
-        }
-    } catch (err) {
-        console.error('Erro ao enviar ZapLink:', err);
-        showToast('❌ Erro na requisição. Verifique sua conexão.');
-        btnElement.innerHTML = originalText;
-        btnElement.disabled = false;
-    }
+    // Abrir em nova aba
+    window.open(waLink, '_blank');
 };
