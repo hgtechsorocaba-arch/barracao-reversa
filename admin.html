@@ -450,6 +450,7 @@
                 <div class="view-header">
                     <h1>📊 Relatório de Vendas</h1>
                     <div class="action-buttons-group">
+                        <button class="btn-secondary" style="border: 1px dashed #ff9800; color: #ff9800;" onclick="openAbandonedCartsModal()">🛒 Resgatar Abandonos</button>
                         <button class="btn-secondary" onclick="exportReportsToExcel()">📄 Exportar Excel</button>
                         <button class="btn-primary" onclick="printReports()">🖨️ Imprimir / PDF</button>
                     </div>
@@ -653,6 +654,39 @@
             </div>
         </div>
     </div>
+
+        <!-- MODAL: CARRINHOS ABANDONADOS -->
+        <div class="modal-overlay" id="abandonedCartsModal" style="display:none; z-index:1000;">
+            <div class="modal-box modal-lg">
+                <button class="modal-close-btn" onclick="closeAbandonedCartsModal()">✕</button>
+                <div class="invoice-header">
+                    <div class="invoice-title">
+                        <h2 style="margin-bottom: 4px;">🛒 Resgate de Carrinhos Abandonados</h2>
+                        <span style="font-size: 0.85rem; color: #888; font-weight: normal; display: block; margin-top: 4px;">Clientes que tiveram pagamentos Pendentes ou Recusados e não compraram o mesmo produto depois.</span>
+                    </div>
+                </div>
+                
+                <div class="table-responsive" style="max-height: 60vh; overflow-y: auto; margin-top: 15px;">
+                    <table class="ads-table">
+                        <thead>
+                            <tr>
+                                <th>Data da Tentativa</th>
+                                <th>Cliente / Telefone</th>
+                                <th>Produto</th>
+                                <th>Status</th>
+                                <th width="140">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="abandonedTbody">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyAbandoned" class="empty-state" style="display: none; margin-top: 20px;">
+                    <p>Ótimo! Nenhum carrinho abandonado não resolvido foi encontrado.</p>
+                </div>
+            </div>
+        </div>
 
     <!-- TOAST -->
     <div id="toast" class="toast"></div>

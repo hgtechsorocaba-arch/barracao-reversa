@@ -1742,3 +1742,156 @@ window.applyAdjustedBanner = function() {
         }
     }, 'image/png');
 };
+
+// ==========================================
+// RESGATE DE CARRINHOS ABANDONADOS
+// ==========================================
+
+window.openAbandonedCartsModal = function() {
+    if (!sales || sales.length === 0) {
+        showToast('Nenhuma venda carregada ainda. Aguarde.', 'error');
+        return;
+    }
+
+    // 1. Agrupar vendas por telefone
+    const salesByPhone = {};
+    sales.forEach(s => {
+        const phone = (s.customerPhone || '').replace(/\D/g, '');
+        if (!phone || phone.length < 8) return; // Ignora os "Não informado" ou curtos demais
+
+        if (!salesByPhone[phone]) {
+            salesByPhone[phone] = [];
+        }
+        salesByPhone[phone].push(s);
+    });
+
+    const abandonedList = [];
+
+    // 2. Analisar cada cliente
+    Object.keys(salesByPhone).forEach(phone => {
+        const customerSales = salesByPhone[phone];
+        
+        // Agrupar as vendas desse cliente por produto (usando a referência ou nome)
+        const salesByProduct = {};
+        customerSales.forEach(s => {
+            const ref = s.reference && s.reference !== 'Nenhuma' ? s.reference : s.productName;
+            if (!salesByProduct[ref]) salesByProduct[ref] = [];
+            salesByProduct[ref].push(s);
+        });
+
+        // Verificar cada produto que ele tentou comprar
+        Object.keys(salesByProduct).forEach(ref => {
+            const productSales = salesByProduct[ref];
+            
+            // Tem alguma venda aprovada para este produto?
+            const hasApproved = productSales.some(s => s.status === 'approved' || s.status === 'paid');
+            
+            if (!hasApproved) {
+                // Pega a tentativa mais recente
+                productSales.sort((a, b) => new Date(b.date) - new Date(a.date));
+                const mostRecentAttempt = productSales[0];
+
+                // Só considera se for "pending", "rejected", "cancelled", etc.
+                if (['pending', 'in_process', 'rejected', 'cancelled', 'failed'].includes(mostRecentAttempt.status)) {
+                    abandonedList.push(mostRecentAttempt);
+                }
+            }
+        });
+    });
+
+    // Ordenar do mais recente para o mais antigo
+    abandonedList.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Renderizar tabela
+    const tbody = document.getElementById('abandonedTbody');
+    const emptyState = document.getElementById('emptyAbandoned');
+
+    if (abandonedList.length === 0) {
+        tbody.innerHTML = '';
+        tbody.parentElement.style.display = 'none';
+        emptyState.style.display = 'block';
+    } else {
+        emptyState.style.display = 'none';
+        tbody.parentElement.style.display = 'block';
+
+        tbody.innerHTML = abandonedList.map(s => {
+            return `
+                <tr>
+                    <td>
+                        <div style="font-weight: 500;">${formatDate(s.date)}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 500;">${s.customerName}</div>
+                        <div style="font-size: 0.75rem; color: #666;">${s.customerPhone}</div>
+                    </td>
+                    <td>
+                        <div class="td-title">${s.productName}</div>
+                        <div class="td-desc" style="font-size: 10px;">REF: #${s.reference}</div>
+                    </td>
+                    <td>
+                        <span class="badge ${getStatusBadgeClass(s.status)}">
+                            ${getStatusText(s.status)}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn-primary btn-sm" style="background-color: #25D366; border-color: #25D366; font-weight: bold; padding: 4px 10px; font-size: 11px;" 
+                            onclick="sendAbandonedCartMessage('${s.customerPhone}', '${s.customerName}', '${s.productName}', '${s.reference}', '${s.amount}', this)">
+                            📲 Chamar no Zap
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    document.getElementById('abandonedCartsModal').style.display = 'flex';
+};
+
+window.closeAbandonedCartsModal = function() {
+    document.getElementById('abandonedCartsModal').style.display = 'none';
+};
+
+window.sendAbandonedCartMessage = async function(phone, customerName, productName, reference, amount, btnElement) {
+    if (!confirm(`Deseja enviar a mensagem de resgate via ZapLink para ${customerName}?`)) {
+        return;
+    }
+
+    const originalText = btnElement.innerHTML;
+    btnElement.innerHTML = 'Enviando...';
+    btnElement.disabled = true;
+
+    try {
+        const response = await fetch('/api/send-zaplink-abandoned', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                phone,
+                customerName,
+                productName,
+                reference,
+                amount,
+                adminPassword: CONFIG.adminPassword
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            showToast('✅ Mensagem de resgate enviada com sucesso!');
+            btnElement.innerHTML = '✅ Enviado';
+            btnElement.style.backgroundColor = '#666';
+            btnElement.style.borderColor = '#666';
+        } else {
+            showToast('❌ Erro ao enviar: ' + (result.error || 'Desconhecido'));
+            btnElement.innerHTML = originalText;
+            btnElement.disabled = false;
+        }
+    } catch (err) {
+        console.error('Erro ao enviar ZapLink:', err);
+        showToast('❌ Erro na requisição. Verifique sua conexão.');
+        btnElement.innerHTML = originalText;
+        btnElement.disabled = false;
+    }
+};
