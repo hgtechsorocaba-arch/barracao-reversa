@@ -51,7 +51,12 @@ module.exports = async function handler(req, res) {
 function sendZapLinkMessage(phone, message, secret, instancePhone) {
     return new Promise((resolve, reject) => {
         // Limpar o telefone (manter apenas números)
-        const cleanPhone = String(phone).replace(/\D/g, '');
+        let cleanPhone = String(phone).replace(/\D/g, '');
+        
+        // Adicionar o código do país (55) caso seja um número do Brasil sem DDI
+        if (cleanPhone.length === 10 || cleanPhone.length === 11) {
+            cleanPhone = '55' + cleanPhone;
+        }
 
         const payload = JSON.stringify({
             secret: secret,
