@@ -942,7 +942,7 @@ async function init() {
 
         if (orderIdToCheck) {
             // VERIFICAR com o servidor se o pagamento foi realmente processado
-            fetch(`/api/check-payment?paymentId=${orderIdToCheck}`)
+            fetch(`/api/check-payment?paymentId=${orderIdToCheck}&t=${Date.now()}`)
                 .then(res => res.json())
                 .then(statusData => {
                     if (statusData && statusData.processed) {
@@ -990,7 +990,7 @@ window.checkPendingOrder = function() {
             if (ageMs > 24 * 60 * 60 * 1000) {
                 localStorage.removeItem('pendingPagarmeOrder');
             } else {
-                fetch(`/api/check-payment?paymentId=${pendingOrder.orderId}`)
+                fetch(`/api/check-payment?paymentId=${pendingOrder.orderId}&t=${Date.now()}`)
                     .then(res => res.json())
                     .then(statusData => {
                         if (statusData && statusData.processed) {
@@ -1207,7 +1207,7 @@ function showPollingOverlay(orderId, checkoutUrl) {
     if (pollingIntervalId) clearInterval(pollingIntervalId);
     pollingIntervalId = setInterval(async () => {
         try {
-            const res = await fetch(`/api/check-payment?paymentId=${orderId}`);
+            const res = await fetch(`/api/check-payment?paymentId=${orderId}&t=${Date.now()}`);
             const statusData = await res.json();
             if (statusData && statusData.processed) {
                 // Pagamento confirmado!

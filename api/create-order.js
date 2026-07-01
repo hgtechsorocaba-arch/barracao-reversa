@@ -78,6 +78,9 @@ module.exports = async function handler(req, res) {
 
             const pagarmePayload = {
                 code: externalRef,
+                // FIX #1: notification_url garante que o Pagar.me chama /api/confirm-payment
+                // quando o pagamento é aprovado, acionando a baixa de estoque.
+                notification_url: `${baseUrl}/api/confirm-payment`,
                 items: [{
                     amount: Math.round(parseFloat(price) * 100), // Preço unitário em centavos
                     description: productName.slice(0, 256),

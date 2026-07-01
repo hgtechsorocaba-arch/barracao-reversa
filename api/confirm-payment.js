@@ -17,7 +17,10 @@ module.exports = async function handler(req, res) {
     const instancePhone = process.env.ZAPLINK_INSTANCE_PHONE; // Deve ser configurado via variável de ambiente no Vercel de cada cliente
 
     const supabaseUrl = 'https://hwmdwlpmutuhrlcgssqw.supabase.co';
-    const supabaseKey = 'sb_publishable_lo4UybgUFxCbAKVbT-Pkzw_8JEipiqT';
+    const supabaseAnonKey = 'sb_publishable_lo4UybgUFxCbAKVbT-Pkzw_8JEipiqT';
+    // FIX #2: Usa a service role key para operações de escrita (INSERT/PATCH)
+    // que precisam bypassar o RLS do Supabase. Configurar SUPABASE_SERVICE_KEY no Vercel.
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || supabaseAnonKey;
 
     // 1. Detectar se é Webhook do Pagar.me (Stone)
     const eventType = req.body.event || req.body.type;
@@ -72,12 +75,17 @@ module.exports = async function handler(req, res) {
             
             // Dar baixa no estoque do produto no Supabase
             const productId = metadata.produto_id || item.code || item.reference_id || item.id;
-            if (productId && productId !== 'avulso' && productId !== 'produto') {
+            // FIX #3: Valida que productId não é string inválida antes de decrementar
+            const invalidIds = ['avulso', 'produto', 'undefined', 'null', '', null, undefined];
+            if (productId && !invalidIds.includes(String(productId).trim())) {
                 try {
+                    console.log(`Dando baixa no estoque do produto ${productId} (qtd: ${quantity})...`);
                     await decrementProductStock(productId, quantity, supabaseUrl, supabaseKey);
                 } catch (err) {
                     console.error(`Error decrementing stock for product ${productId}:`, err);
                 }
+            } else {
+                console.log(`Produto ID inválido ou avulso ("${productId}"), pulando baixa de estoque.`);
             }
             
             let name = metadata.cliente_nome || order.customer?.name || 'Não informado';
@@ -184,12 +192,17 @@ module.exports = async function handler(req, res) {
         // Dar baixa no estoque do produto no Supabase
         const productId = metadata.produto_id || item.id;
         const quantity = parseInt(metadata.quantidade || item.quantity || 1, 10);
-        if (productId && productId !== 'avulso' && productId !== 'produto') {
+        // FIX #3: Valida que productId não é string inválida antes de decrementar
+        const invalidIds = ['avulso', 'produto', 'undefined', 'null', '', null, undefined];
+        if (productId && !invalidIds.includes(String(productId).trim())) {
             try {
+                console.log(`Dando baixa no estoque do produto ${productId} (qtd: ${quantity})...`);
                 await decrementProductStock(productId, quantity, supabaseUrl, supabaseKey);
             } catch (err) {
                 console.error(`Error decrementing stock for product ${productId}:`, err);
             }
+        } else {
+            console.log(`Produto ID inválido ou avulso ("${productId}"), pulando baixa de estoque.`);
         }
         
         let name = metadata.cliente_nome || '';
