@@ -185,11 +185,14 @@ async function searchProductInSupabase(searchText, productId = null) {
 }
 
 /**
- * Envia uma mensagem via API Oficial do WhatsApp.
+ * Envia uma mensagem via API ZapLink (Baileys).
  */
 async function sendReplyMessage(toPhone, product) {
-    if (!WHATSAPP_TOKEN) {
-        console.error('WHATSAPP_TOKEN não configurado nas variáveis de ambiente.');
+    const zapLinkSecret = process.env.ZAPLINK_EXTERNAL_SECRET || 'hgtech_bot_secret_123';
+    const instancePhone = process.env.ZAPLINK_INSTANCE_PHONE;
+
+    if (!instancePhone) {
+        console.error('ZAPLINK_INSTANCE_PHONE não configurado nas variáveis de ambiente.');
         return;
     }
 
@@ -197,27 +200,26 @@ async function sendReplyMessage(toPhone, product) {
     const productLink = `https://www.barracaoreversa.com.br/?p=${product.id}`;
     
     // Monta o texto bonitão do robô
-    const textMsg = `👋 *Olá!*\n\nVi que você se interessou pelo *${product.name}*!\nEle está disponível por apenas *${priceFormatted}*.\n\n🛍️ *Garanta o seu agora mesmo clicando no link abaixo e finalizando o pedido no nosso site:*\n\n👉 ${productLink}`;
+    let textMsg = `👋 *Olá!*\n\nVi que você se interessou pelo *${product.name}*!\nEle está disponível por apenas *${priceFormatted}*.\n\n🛍️ *Garanta o seu agora mesmo clicando no link abaixo e finalizando o pedido no nosso site:*\n\n👉 ${productLink}`;
+
+    if (product.image) {
+        textMsg += `\n\n🖼️ *Foto do produto:* ${product.image}`;
+    }
 
     const payload = JSON.stringify({
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: toPhone,
-        type: "text",
-        text: {
-            preview_url: true, // Para gerar o card bonitinho com a foto do site
-            body: textMsg
-        }
+        secret: zapLinkSecret,
+        message: textMsg,
+        groupId: toPhone,
+        instancePhone: instancePhone
     });
 
-    return new Promise((resolve, reject) => {
-        const urlObj = new URL(WHATSAPP_API_URL);
+    return new Promise((resolve) => {
         const options = {
-            hostname: urlObj.hostname,
-            path: urlObj.pathname + urlObj.search,
+            hostname: 'zaplink.app.br',
+            port: 443,
+            path: '/api/external/send-message',
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
                 'Content-Type': 'application/json',
                 'Content-Length': Buffer.byteLength(payload)
             }
@@ -230,14 +232,14 @@ async function sendReplyMessage(toPhone, product) {
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                     resolve(resData);
                 } else {
-                    console.error(`Falha no envio do WhatsApp API. Status: ${res.statusCode}. Resposta: ${resData}`);
-                    resolve(null); // Resolvendo pra não travar a promise principal
+                    console.error(`Falha no envio do WhatsApp via ZapLink. Status: ${res.statusCode}. Resposta: ${resData}`);
+                    resolve(null);
                 }
             });
         });
 
         req.on('error', (e) => {
-            console.error(`Erro ao tentar enviar pro WhatsApp: ${e}`);
+            console.error(`Erro ao tentar enviar via ZapLink: ${e}`);
             resolve(null);
         });
 

@@ -10,81 +10,59 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : null;
-    const phoneId = process.env.WHATSAPP_PHONE_ID ? process.env.WHATSAPP_PHONE_ID.trim() : null;
-    const templateName = (overrideTemplate || process.env.WHATSAPP_TEMPLATE_NAME || 'venda_produto_barracao').trim();
+    const zapLinkSecret = process.env.ZAPLINK_EXTERNAL_SECRET || 'hgtech_bot_secret_123';
+    const instancePhone = process.env.ZAPLINK_INSTANCE_PHONE;
 
-    if (!token || !phoneId) {
-        return res.status(500).json({ error: 'WhatsApp API credentials not configured in Vercel environment' });
+    if (!instancePhone) {
+        return res.status(500).json({ error: 'ZapLink instance phone not configured in Vercel environment' });
+    }
+
+    // Formata a mensagem de texto para o ZapLink
+    let message = '';
+    if (overrideTemplate === 'hello_world') {
+        message = `🧪 *Teste de Conexão (ZapLink / Baileys)*\n\nParabéns! Sua integração do WhatsApp via ZapLink está configurada e funcionando corretamente no Barracão Reversa.`;
+    } else {
+        const priceFormatted = productPrice ? productPrice.replace('R$', '').trim() : '0,00';
+        message = `👋 *Olá!*\n\nOlha só este produto excelente que temos no Barracão Reversa:\n\n` +
+            `*${productName}*\n` +
+            `💵 *Preço:* R$ ${priceFormatted}\n\n` +
+            `🛍️ *Para comprar ou ver mais detalhes, clique no link abaixo:*\n` +
+            `👉 ${productUrl}`;
+            
+        if (productImage) {
+            message += `\n\n🖼️ *Foto do produto:* ${productImage}`;
+        }
     }
 
     try {
-        const response = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
+        console.log(`Enviando mensagem via ZapLink para o número ${phone}...`);
+        
+        const response = await fetch('https://zaplink.app.br/api/external/send-message', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                messaging_product: 'whatsapp',
-                to: phone,
-                type: 'template',
-                template: {
-                    name: templateName,
-                    language: {
-                        code: 'pt_BR'
-                    },
-                    components: templateName === 'hello_world' ? [] : [
-                        {
-                            type: 'header',
-                            parameters: [
-                                {
-                                    type: 'image',
-                                    image: {
-                                        // Tentando link DIRETO do Supabase para evitar bloqueios de proxy
-                                        link: productImage && productImage.startsWith('http') 
-                                            ? encodeURI(productImage) 
-                                            : 'https://hwmdwlpmutuhrlcgssqw.supabase.co/storage/v1/object/public/public-assets/placeholder.jpg'
-                                    }
-                                }
-                            ]
-                        },
-                        {
-                            type: 'body',
-                            parameters: [
-                                { type: 'text', text: productName },
-                                { type: 'text', text: productPrice }
-                            ]
-                        },
-                        {
-                            type: 'button',
-                            sub_type: 'url',
-                            index: 0, // Usar número inteiro conforme documentação
-                            parameters: [
-                                {
-                                    type: 'text',
-                                    text: productUrl.includes('id=') ? productUrl.split('id=').pop() : productUrl
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }),
+                secret: zapLinkSecret,
+                message: message,
+                groupId: phone,
+                instancePhone: instancePhone
+            })
         });
 
         const data = await response.json();
-        console.log('WS Meta Response for', phone, ':', JSON.stringify(data));
+        console.log('ZapLink Response for', phone, ':', JSON.stringify(data));
 
         if (!response.ok) {
-            console.error('WhatsApp API Error Error Detail:', JSON.stringify(data, null, 2));
+            console.error('ZapLink API Error Detail:', JSON.stringify(data, null, 2));
             return res.status(response.status).json({ 
-                error: data.error?.message || 'Failed to send message', 
+                error: data.error || 'Failed to send message via ZapLink', 
                 details: data,
-                sentPayload: { to: phone, template: templateName }
+                sentPayload: { to: phone }
             });
         }
 
-        return res.status(200).json({ success: true, metaResponse: data });
+        return res.status(200).json({ success: true, zapLinkResponse: data });
     } catch (error) {
         console.error('Server Error:', error);
         return res.status(500).json({ error: 'Internal Server Error', message: error.message });
