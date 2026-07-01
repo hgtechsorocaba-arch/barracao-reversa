@@ -14,7 +14,7 @@ module.exports = async function handler(req, res) {
 
     const zapLinkSecret = process.env.ZAPLINK_EXTERNAL_SECRET || 'hgtech_bot_secret_123';
     const notifyPhone = process.env.NOTIFY_PHONE || 'notify'; // Destinatário padrão ou 'notify' para roteamento pelo ZapLink
-    const instancePhone = process.env.ZAPLINK_INSTANCE_PHONE || '5515988136215'; // Número da instância ativa (Principal)
+    const instancePhone = process.env.ZAPLINK_INSTANCE_PHONE; // Deve ser configurado via variável de ambiente no Vercel de cada cliente
 
     const supabaseUrl = 'https://hwmdwlpmutuhrlcgssqw.supabase.co';
     const supabaseKey = 'sb_publishable_lo4UybgUFxCbAKVbT-Pkzw_8JEipiqT';
