@@ -13,7 +13,7 @@ module.exports = async function handler(req, res) {
     }
 
     const zapLinkSecret = process.env.ZAPLINK_EXTERNAL_SECRET || 'hgtech_bot_secret_123';
-    const notifyPhone = process.env.NOTIFY_PHONE || '5515996966956'; // Número do Everton ou JID do Grupo
+    const notifyPhone = process.env.NOTIFY_PHONE || 'notify'; // Destinatário padrão ou 'notify' para roteamento pelo ZapLink
     const instancePhone = process.env.ZAPLINK_INSTANCE_PHONE || '5515996966956'; // Número da instância do Everton
 
     const supabaseUrl = 'https://hwmdwlpmutuhrlcgssqw.supabase.co';
