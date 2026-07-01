@@ -191,11 +191,6 @@ async function sendReplyMessage(toPhone, product) {
     const zapLinkSecret = process.env.ZAPLINK_EXTERNAL_SECRET || 'hgtech_bot_secret_123';
     const instancePhone = process.env.ZAPLINK_INSTANCE_PHONE;
 
-    if (!instancePhone) {
-        console.error('ZAPLINK_INSTANCE_PHONE não configurado nas variáveis de ambiente.');
-        return;
-    }
-
     const priceFormatted = 'R$ ' + parseFloat(product.price).toFixed(2).replace('.', ',');
     const productLink = `https://www.barracaoreversa.com.br/?p=${product.id}`;
     
